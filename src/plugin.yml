@@ -1,0 +1,6 @@
+name: MineIt-MineableGems
+main: com.rogermiranda1000.mineit.MinableGems
+version: 1.0
+author: rogermiranda1000
+api-version: 1.13
+depend: [MineIt,MineableGems]
