@@ -1,8 +1,8 @@
-package com.rogermiranda1000.mineit.events;
+package com.rogermiranda1000.mineit.mineable_gems.events;
 
-import com.rogermiranda1000.mineit.CustomMineDrop;
 import com.rogermiranda1000.mineit.Mine;
 import com.rogermiranda1000.mineit.MineItApi;
+import com.rogermiranda1000.mineit.mineable_gems.CustomMineDrop;
 import me.Mohamad82.MineableGems.Core.CustomDrop;
 import me.Mohamad82.MineableGems.Main;
 import org.bukkit.block.Block;

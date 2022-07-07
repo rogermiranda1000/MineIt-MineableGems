@@ -1,4 +1,4 @@
-package com.rogermiranda1000.mineit;
+package com.rogermiranda1000.mineit.mineable_gems;
 
 /**
  * We need to check if ConfigurationSection contains the mine argument, and change the return element if needed.

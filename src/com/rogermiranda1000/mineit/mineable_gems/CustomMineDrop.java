@@ -1,5 +1,6 @@
-package com.rogermiranda1000.mineit;
+package com.rogermiranda1000.mineit.mineable_gems;
 
+import com.rogermiranda1000.mineit.Mine;
 import com.sun.istack.internal.NotNull;
 import me.Mohamad82.MineableGems.Core.CustomDrop;
 import org.bukkit.inventory.ItemStack;

@@ -1,8 +1,8 @@
-package com.rogermiranda1000.mineit;
+package com.rogermiranda1000.mineit.mineable_gems;
 
-import com.rogermiranda1000.mineit.events.BreakEventListener;
+import com.rogermiranda1000.mineit.ListenerNotFoundException;
+import com.rogermiranda1000.mineit.MineIt;
 import me.Mohamad82.MineableGems.Core.DropReader;
-import me.Mohamad82.MineableGems.Events.BreakEvent;
 import me.Mohamad82.MineableGems.Main;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
@@ -10,7 +10,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredListener;
 import org.bukkit.plugin.java.JavaPlugin;
 
