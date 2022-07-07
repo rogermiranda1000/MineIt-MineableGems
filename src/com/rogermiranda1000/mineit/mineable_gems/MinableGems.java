@@ -4,6 +4,7 @@ import com.rogermiranda1000.mineit.ListenerNotFoundException;
 import com.rogermiranda1000.mineit.MineIt;
 import me.Mohamad82.MineableGems.Core.DropReader;
 import me.Mohamad82.MineableGems.Main;
+import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
@@ -18,6 +19,14 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 public class MinableGems extends JavaPlugin {
+    public void printConsoleErrorMessage(String msg) {
+        Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "[" + this.getName() + "] " + msg);
+    }
+
+    public void printConsoleWarningMessage(String msg) {
+        Bukkit.getConsoleSender().sendMessage(ChatColor.YELLOW + "[" + this.getName() + "] " + msg);
+    }
+
     @Override
     public void onEnable() {
         // TODO load after
@@ -41,6 +50,17 @@ public class MinableGems extends JavaPlugin {
         } catch (ListenerNotFoundException ex) {
             ex.printStackTrace();
         }*/
+
+        // we need to change the return
+        try {
+            new ProfilerTest().run();
+        } catch (UnsupportedOperationException ex) {
+            this.printConsoleErrorMessage("This plugin won't work in this device (" + System.getProperty("os.name") + "). This error won't be solved, so don't report it.");
+        } catch (RuntimeException ex) {
+            this.printConsoleErrorMessage(".dll not found, have you uploaded MineIt-MineableGems inside the plugins folder?");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     private void reloadMGConfig() {

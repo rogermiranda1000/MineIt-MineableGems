@@ -4,6 +4,7 @@ import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.net.URL;
+import java.nio.file.Paths;
 
 /**
  * Various IO tools.
@@ -12,7 +13,9 @@ import java.net.URL;
  */
 public class Tools {
     private static final String REV = "1";
-    private static final String NATIVE_DIR = "natives/";
+    private static final String DIR = Paths.get("").toAbsolutePath().toString()
+            .replaceAll(File.separatorChar == '\\' ? "\\\\" : File.separator, "/");
+    private static final String NATIVE_DIR = "plugins/MineIt-MineableGems/"; //"natives/";
     private static final String WIN_DIR = "windows/";
     private static final String NIX_DIR = "linux/";
     private static final String MAC_DIR = "mac/";
@@ -119,7 +122,7 @@ public class Tools {
     /**
      * Attempts to load an attach library.
      */
-    public static void loadAgentLibrary() {
+    public static void loadAgentLibrary() throws RuntimeException, UnsupportedOperationException {
         switch (Platform.getPlatform()) {
             case WINDOWS:
                 unpack(WIN_DIR + "attach.dll");
@@ -138,18 +141,19 @@ public class Tools {
         }
     }
 
-    private static void unpack(String path) {
+    private static void unpack(String file) throws RuntimeException {
         try {
-            System.out.println(NATIVE_DIR + ((Platform.is64Bit() || Platform.getPlatform() == Platform.MAC) ? "64/" : "32/") + path);
-            URL url = ClassLoader.getSystemResource(NATIVE_DIR + ((Platform.is64Bit() || Platform.getPlatform() == Platform.MAC) ? "64/" : "32/") + path);
+            String path = Tools.DIR + "/" + Tools.NATIVE_DIR + ((Platform.is64Bit() || Platform.getPlatform() == Platform.MAC) ? "64/" : "32/") + file;
+            //System.out.println(path);
+            File url = new File(path);
 
             File pathDir = new File(CACHE_DIR);
             pathDir.mkdirs();
-            File libfile = new File(pathDir, path.substring(path.lastIndexOf("/"), path.length()));
+            File libfile = new File(pathDir, file.substring(file.lastIndexOf('/')));
 
             if (!libfile.exists()) {
                 libfile.deleteOnExit();
-                InputStream in = url.openStream();
+                InputStream in = new FileInputStream(url);
                 OutputStream out = new BufferedOutputStream(new FileOutputStream(libfile));
 
                 int len;

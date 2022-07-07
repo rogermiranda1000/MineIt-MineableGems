@@ -14,19 +14,22 @@ import static org.objectweb.asm.Opcodes.*;
 
 /**
  * Profiling test class.
- *
- * @author Tudor
+ * @author https://github.com/Xyene/ASM-Late-Bind-Agent
+ * @author Roger Miranda
  */
 public class ProfilerTest {
     public static void main(String[] args) {
         try {
-            Tools.loadAgentLibrary(); // Load attach library
-            AgentLoader.attachAgentToJVM(Tools.getCurrentPID(), Agent.class, AgentLoader.class);
-        } catch (Exception e) {
-            e.printStackTrace();
+            new ProfilerTest().run();
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
+    }
+    public void run() throws Exception {
+        Tools.loadAgentLibrary(); // Load attach library
+        AgentLoader.attachAgentToJVM(Tools.getCurrentPID(), Agent.class, AgentLoader.class);
 
-        new ProfilerTest().test(); // This should get logged, if everything worked
+        test(); // This should get logged, if everything worked
     }
 
     public void test() {
@@ -79,7 +82,7 @@ public class ProfilerTest {
             }
 
             // Don't profile yourself, otherwise you'll die in a StackOverflow.
-            if (className.startsWith("tk/ivybits/agent/ProfilerTest")) {
+            if (className.startsWith("com/rogermiranda1000/mineit/mineable_gems/ProfilerTest")) {
                 return classBuffer;
             }
 
@@ -147,7 +150,7 @@ public class ProfilerTest {
                 this.visitLdcInsn(className);
                 this.visitLdcInsn(methodName);
                 this.visitMethodInsn(INVOKESTATIC,
-                        "tk/ivybits/agent/ProfilerTest$Agent$Profiler",
+                        "com/rogermiranda1000/mineit/mineable_gems/ProfilerTest$Agent$Profiler",
                         "start",
                         "(Ljava/lang/String;Ljava/lang/String;)V");
                 super.visitCode();
@@ -166,7 +169,7 @@ public class ProfilerTest {
                         this.visitLdcInsn(className);
                         this.visitLdcInsn(methodName);
                         this.visitMethodInsn(INVOKESTATIC,
-                                "tk/ivybits/agent/ProfilerTest$Agent$Profiler",
+                                "com/rogermiranda1000/mineit/mineable_gems/ProfilerTest$Agent$Profiler",
                                 "end",
                                 "(Ljava/lang/String;Ljava/lang/String;)V");
                     default:
