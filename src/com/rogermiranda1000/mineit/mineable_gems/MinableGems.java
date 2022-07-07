@@ -59,6 +59,7 @@ public class MinableGems extends JavaPlugin {
         } catch (RuntimeException ex) {
             this.printConsoleErrorMessage(".dll not found, have you uploaded MineIt-MineableGems inside the plugins folder?");
         } catch (Exception ex) {
+            this.printConsoleErrorMessage("Fatal error; the plugin won't work.");
             ex.printStackTrace();
         }
     }
