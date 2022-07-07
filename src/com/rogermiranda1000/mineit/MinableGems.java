@@ -1,7 +1,6 @@
 package com.rogermiranda1000.mineit;
 
 import com.rogermiranda1000.mineit.events.BreakEventListener;
-import javassist.*;
 import me.Mohamad82.MineableGems.Core.DropReader;
 import me.Mohamad82.MineableGems.Events.BreakEvent;
 import me.Mohamad82.MineableGems.Main;
@@ -15,16 +14,15 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredListener;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.DataOutputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 public class MinableGems extends JavaPlugin {
     @Override
     public void onEnable() {
-        PluginManager pm = getServer().getPluginManager();
+        // TODO load after
+        /*PluginManager pm = getServer().getPluginManager();
         Plugin mineableGems = pm.getPlugin("MineableGems");
         Main mineableGemsObject = Main.getInstance();
         MineItApi mineItObject = MineItApi.getInstance();
@@ -43,31 +41,11 @@ public class MinableGems extends JavaPlugin {
                     }, mineItObject, mineableGemsObject), this);
         } catch (ListenerNotFoundException ex) {
             ex.printStackTrace();
-        }
-
-        // we need to check if ConfigurationSection contains the mine argument, and change the return element if needed
-        // @author https://stackoverflow.com/a/3031300/9178470
-        try {
-            ClassPool pool = ClassPool.getDefault();
-            pool.insertClassPath(new ClassClassPath(DropReader.class));
-            CtClass ctDropReader = pool.get(DropReader.class.getName());
-            CtMethod configReaderMethod = ctDropReader.getDeclaredMethod("readCustomDrop");
-            configReaderMethod.insertBefore("return null;");
-            ctDropReader.toClass();
-
-            try {
-                FileOutputStream os = new FileOutputStream("new.class");
-                ctDropReader.getClassFile().write(new DataOutputStream(os));
-                os.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } catch (NotFoundException | CannotCompileException ex) {
-            ex.printStackTrace();
-        }
+        }*/
     }
 
     private void reloadMGConfig() {
+        // code from Commands > onCommand > reload
         Main.getInstance().configuration.reloadConfig();
         new DropReader().reload();
     }
