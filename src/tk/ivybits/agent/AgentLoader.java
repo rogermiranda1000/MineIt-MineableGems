@@ -35,7 +35,7 @@ public class AgentLoader {
      * @throws AgentLoadException
      * @throws AgentInitializationException
      */
-    public static void attachAgentToJVM(String pid, Class agent, Class... resources)
+    public static void attachAgentToJVM(String pid, Class<?> agent, Class<?>... resources)
             throws IOException, AttachNotSupportedException, AgentLoadException, AgentInitializationException {
 
         VirtualMachine vm = VirtualMachine.attach(pid);
@@ -52,7 +52,7 @@ public class AgentLoader {
      * @throws FileNotFoundException
      * @throws IOException
      */
-    public static File generateAgentJar(Class agent, Class... resources) throws IOException {
+    public static File generateAgentJar(Class<?> agent, Class<?>... resources) throws IOException {
         File jarFile = File.createTempFile("tk/ivybits/agent", ".jar");
         jarFile.deleteOnExit();
 
@@ -71,7 +71,7 @@ public class AgentLoader {
         jos.write(getBytesFromStream(agent.getClassLoader().getResourceAsStream(unqualify(agent))));
         jos.closeEntry();
 
-        for (Class clazz : resources) {
+        for (Class<?> clazz : resources) {
             String name = unqualify(clazz);
             jos.putNextEntry(new JarEntry(name));
             jos.write(getBytesFromStream(clazz.getClassLoader().getResourceAsStream(name)));

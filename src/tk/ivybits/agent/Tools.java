@@ -171,23 +171,16 @@ public class Tools {
     }
 
     public enum Platform {
-
-        LINUX, WINDOWS, MAC, SOLARIS;
+        LINUX, WINDOWS, MAC, SOLARIS,
+        OTHER;
 
         public static Platform getPlatform() {
             String os = System.getProperty("os.name").toLowerCase();
-            if (os.indexOf("win") >= 0) {
-                return WINDOWS;
-            }
-            if ((os.indexOf("nix") >= 0) || (os.indexOf("nux") >= 0) || (os.indexOf("aix") > 0)) {
-                return LINUX;
-            }
-            if (os.indexOf("mac") >= 0) {
-                return MAC;
-            }
-            if (os.indexOf("sunos") >= 0)
-                return SOLARIS;
-            return null;
+            if (os.contains("win")) return WINDOWS;
+            if ((os.contains("nix")) || (os.contains("nux")) || (os.indexOf("aix") > 0)) return LINUX;
+            if (os.contains("mac")) return MAC;
+            if (os.contains("sunos")) return SOLARIS;
+            return OTHER;
         }
 
         public static boolean is64Bit() {

@@ -64,6 +64,11 @@ public class MinableGems extends JavaPlugin {
         }
     }
 
+    @Override
+    public void onDisable() {
+        ProfilerTest.Agent.killAgent();
+    }
+
     private void reloadMGConfig() {
         // code from Commands > onCommand > reload
         Main.getInstance().configuration.reloadConfig();

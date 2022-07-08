@@ -1,9 +1,13 @@
 package com.rogermiranda1000.mineit.mineable_gems;
 
+import com.sun.tools.attach.AgentInitializationException;
+import com.sun.tools.attach.AgentLoadException;
+import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.xml.internal.ws.org.objectweb.asm.*;
 import tk.ivybits.agent.AgentLoader;
 import tk.ivybits.agent.Tools;
 
+import java.io.IOException;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -18,14 +22,7 @@ import static org.objectweb.asm.Opcodes.*;
  * @author Roger Miranda
  */
 public class ProfilerTest {
-    public static void main(String[] args) {
-        try {
-            new ProfilerTest().run();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
-    public void run() throws Exception {
+    public void run() throws RuntimeException, UnsupportedOperationException, IOException, AttachNotSupportedException, AgentLoadException, AgentInitializationException {
         Tools.loadAgentLibrary(); // Load attach library
         AgentLoader.attachAgentToJVM(Tools.getCurrentPID(), Agent.class, AgentLoader.class);
 
@@ -42,7 +39,6 @@ public class ProfilerTest {
      * @author Tudor
      */
     public static class Agent implements ClassFileTransformer {
-
         private static Instrumentation instrumentation = null;
         private static Agent transformer;
 
@@ -65,26 +61,22 @@ public class ProfilerTest {
          * Kills this agent
          */
         public static void killAgent() {
-            instrumentation.removeTransformer(transformer);
+            if (instrumentation != null) instrumentation.removeTransformer(transformer);
         }
 
         @Override
-        public byte[] transform(ClassLoader loader, String className, Class classBeingRedefined, ProtectionDomain protectionDomain, byte[] classBuffer)
-                throws IllegalClassFormatException {
-
-            System.out.println("Instrumenting class: " + className);
-
+        public byte[] transform(ClassLoader loader, String className, Class classBeingRedefined, ProtectionDomain protectionDomain, byte[] classBuffer) throws IllegalClassFormatException {
             // We can only profile classes that we can see. If a class uses a custom
-            // ClassLoader we will nto be able to see it and crash if we try to
+            // ClassLoader we won't be able to see it and crash if we try to
             // profile it.
-            if (loader != ClassLoader.getSystemClassLoader()) {
-                return classBuffer;
-            }
+            if (loader != ClassLoader.getSystemClassLoader()) return classBuffer;
 
-            // Don't profile yourself, otherwise you'll die in a StackOverflow.
-            if (className.startsWith("com/rogermiranda1000/mineit/mineable_gems/ProfilerTest")) {
-                return classBuffer;
-            }
+            // Don't profile yourself
+            System.out.println(ProfilerTest.class.getName() + " - " + className);
+            System.out.println(Agent.class.getName());
+            if (className.startsWith("com/rogermiranda1000/mineit/mineable_gems/ProfilerTest")) return classBuffer;
+
+            //System.out.println("Instrumenting class: " + className);
 
             byte[] result = classBuffer;
             try {
@@ -98,6 +90,7 @@ public class ProfilerTest {
                 result = writer.toByteArray();
                 System.out.println("Returning reinstrumented class: " + className);
             } catch (Exception e) {
+                System.err.println("Error reinstrumenting class " + className);
                 e.printStackTrace();
             }
             return result;
@@ -106,8 +99,8 @@ public class ProfilerTest {
         /**
          * Base profiling class.
          */
+        @SuppressWarnings("unused")
         public static class Profiler {
-
             public static void start(String className, String methodName) {
                 System.out.println(className + "\t" + methodName + "\tstart\t" + System.currentTimeMillis());
             }
@@ -121,7 +114,6 @@ public class ProfilerTest {
          * Profiling class adapter.
          */
         public class ProfileClassAdapter extends ClassAdapter {
-
             private String className;
 
             public ProfileClassAdapter(ClassVisitor visitor, String className) {
@@ -136,7 +128,7 @@ public class ProfilerTest {
 
         // The method adapter
         public class ProfileMethodAdapter extends MethodAdapter {
-            private final String className, methodName;
+            private String className, methodName;
 
             public ProfileMethodAdapter(MethodVisitor visitor, String className, String methodName) {
                 super(visitor);
