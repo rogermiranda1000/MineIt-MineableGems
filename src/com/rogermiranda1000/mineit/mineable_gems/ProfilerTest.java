@@ -45,7 +45,6 @@ public class ProfilerTest {
         public static void agentmain(String string, Instrumentation instrument) {
             System.out.println("Agent loaded!");
 
-            // initialization code:
             transformer = new Agent();
             instrumentation = instrument;
             instrumentation.addTransformer(transformer);
@@ -54,6 +53,7 @@ public class ProfilerTest {
                 instrumentation.redefineClasses(new ClassDefinition(ProfilerTest.class, Tools.getBytesFromClass(ProfilerTest.class)));
             } catch (Exception e) {
                 System.out.println("Failed to redefine class!");
+                e.printStackTrace();
             }
         }
 
@@ -72,9 +72,7 @@ public class ProfilerTest {
             if (loader != ClassLoader.getSystemClassLoader()) return classBuffer;
 
             // Don't profile yourself
-            System.out.println(ProfilerTest.class.getName() + " - " + className);
-            System.out.println(Agent.class.getName());
-            if (className.startsWith("com/rogermiranda1000/mineit/mineable_gems/ProfilerTest")) return classBuffer;
+            if (className.startsWith(Tools.getClassName(ProfilerTest.class))) return classBuffer;
 
             //System.out.println("Instrumenting class: " + className);
 
@@ -142,7 +140,7 @@ public class ProfilerTest {
                 this.visitLdcInsn(className);
                 this.visitLdcInsn(methodName);
                 this.visitMethodInsn(INVOKESTATIC,
-                        "com/rogermiranda1000/mineit/mineable_gems/ProfilerTest$Agent$Profiler",
+                        Tools.getClassName(Profiler.class),
                         "start",
                         "(Ljava/lang/String;Ljava/lang/String;)V");
                 super.visitCode();
@@ -161,7 +159,7 @@ public class ProfilerTest {
                         this.visitLdcInsn(className);
                         this.visitLdcInsn(methodName);
                         this.visitMethodInsn(INVOKESTATIC,
-                                "com/rogermiranda1000/mineit/mineable_gems/ProfilerTest$Agent$Profiler",
+                                Tools.getClassName(Profiler.class),
                                 "end",
                                 "(Ljava/lang/String;Ljava/lang/String;)V");
                     default:

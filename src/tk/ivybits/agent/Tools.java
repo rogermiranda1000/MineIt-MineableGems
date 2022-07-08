@@ -188,4 +188,8 @@ public class Tools {
             return "amd64".equals(osArch) || "x86_64".equals(osArch);
         }
     }
+
+    public static String getClassName(Class<?> c) {
+        return c.getName().replace('.', '/');
+    }
 }
