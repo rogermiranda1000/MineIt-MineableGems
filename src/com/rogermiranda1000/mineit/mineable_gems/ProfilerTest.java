@@ -8,10 +8,10 @@ import tk.ivybits.agent.AgentLoader;
 import tk.ivybits.agent.Tools;
 
 import java.io.IOException;
-import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 
 import static org.objectweb.asm.Opcodes.*;
@@ -50,10 +50,14 @@ public class ProfilerTest {
             instrumentation.addTransformer(transformer);
 
             try {
-                instrumentation.redefineClasses(new ClassDefinition(ProfilerTest.class, Tools.getBytesFromClass(ProfilerTest.class)));
-            } catch (Exception e) {
-                System.out.println("Failed to redefine class!");
-                e.printStackTrace();
+                instrumentation.redefineClasses(Tools.getSameClass(ProfilerTest.class));
+            } catch (IOException | SecurityException | ClassNotFoundException | UnmodifiableClassException ex) {
+                System.err.println("Failed to redefine class!");
+                ex.printStackTrace();
+            } catch (NoClassDefFoundError ex) {
+                // this shouldn't happen
+                System.err.println("Unexpected error:");
+                ex.printStackTrace();
             }
         }
 

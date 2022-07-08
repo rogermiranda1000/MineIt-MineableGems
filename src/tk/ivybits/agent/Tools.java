@@ -1,6 +1,9 @@
 package tk.ivybits.agent;
 
+import com.rogermiranda1000.mineit.mineable_gems.ProfilerTest;
+
 import java.io.*;
+import java.lang.instrument.ClassDefinition;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.net.URL;
@@ -51,8 +54,12 @@ public class Tools {
      * @return Returns a byte[] representation of given class.
      * @throws IOException
      */
-    public static byte[] getBytesFromClass(Class<?> clazz) throws IOException {
-        return getBytesFromStream(clazz.getClassLoader().getResourceAsStream(clazz.getName().replace('.', '/') + ".class"));
+    public static byte[] getBytesFromClass(Class<?> clazz) throws IOException, SecurityException {
+        ClassLoader classLoader = clazz.getClassLoader();
+        String classPath = Tools.getClassName(clazz) + ".class";
+        InputStream is = classLoader.getResourceAsStream(classPath);
+        if (is == null) throw new IOException("Error loading resource " + classPath);
+        return getBytesFromStream(is);
     }
 
     /**
@@ -191,5 +198,9 @@ public class Tools {
 
     public static String getClassName(Class<?> c) {
         return c.getName().replace('.', '/');
+    }
+
+    public static ClassDefinition getSameClass(Class<?> c) throws IOException, SecurityException {
+        return new ClassDefinition(c, Tools.getBytesFromClass(c));
     }
 }
