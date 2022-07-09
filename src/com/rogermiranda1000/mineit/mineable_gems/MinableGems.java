@@ -2,6 +2,7 @@ package com.rogermiranda1000.mineit.mineable_gems;
 
 import com.rogermiranda1000.mineit.ListenerNotFoundException;
 import com.rogermiranda1000.mineit.MineIt;
+import com.rogermiranda1000.mineit.mineable_gems.recompiler.MatchNotFoundException;
 import me.Mohamad82.MineableGems.Core.DropReader;
 import me.Mohamad82.MineableGems.Main;
 import net.md_5.bungee.api.ChatColor;
@@ -19,13 +20,20 @@ import org.jd.core.v1.api.loader.LoaderException;
 import org.jd.core.v1.api.printer.Printer;
 
 import javax.annotation.Nullable;
+import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.ToolProvider;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -73,11 +81,25 @@ public class MinableGems extends JavaPlugin {
             decompiler.decompile(loader, printer, classPath);
 
             String source = printer.toString();
+            Pattern functionPattern = Pattern.compile("public CustomDrop readCustomDrop\\([^)]*\\)\\s*\\{\\s*CustomDrop customDrop;");
+            Matcher matcher = functionPattern.matcher(source);
+            if (!matcher.find()) throw new MatchNotFoundException();
+            source = source.substring(0,matcher.end()) + "customDrop = null;" + source.substring(matcher.end()); // append at the middle
+
             System.out.println(source);
         } catch (Exception ex) {
             this.printConsoleErrorMessage("Error while decompiling MineableGems");
             ex.printStackTrace();
         }
+    }
+
+    private static void compile(String sourceFilePath, String classPath) throws IOException {
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null);
+        Iterable<? extends JavaFileObject> sourcefiles = fileManager.getJavaFileObjects(sourceFilePath);
+        Iterable<String> options = Arrays.asList("-d", classPath);
+        compiler.getTask(null, fileManager, null, options, null, sourcefiles).call();
+        fileManager.close();
     }
 
     /**
