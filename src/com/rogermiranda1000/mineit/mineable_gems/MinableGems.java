@@ -4,7 +4,6 @@ import com.rogermiranda1000.mineit.ListenerNotFoundException;
 import com.rogermiranda1000.mineit.MineIt;
 import com.rogermiranda1000.mineit.mineable_gems.recompiler.MatchNotFoundException;
 import me.Mohamad82.MineableGems.Core.DropReader;
-import me.Mohamad82.MineableGems.Main;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
@@ -18,19 +17,15 @@ import org.jd.core.v1.ClassFileToJavaSourceDecompiler;
 import org.jd.core.v1.api.loader.Loader;
 import org.jd.core.v1.api.loader.LoaderException;
 import org.jd.core.v1.api.printer.Printer;
+import org.joor.Reflect;
 
 import javax.annotation.Nullable;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -72,7 +67,8 @@ public class MinableGems extends JavaPlugin {
 
         /* Recompile MineableGems */
         try {
-            String classPath = "plugins/MineableGems-1.11.3.jar/" + DropReader.class.getName(); // TODO get name
+            String className = "me.Mohamad82.MineableGems.Core.DropReader";
+            String classPath = "plugins/MineableGems-1.11.3.jar/" + className; // TODO get name
 
             ClassFileToJavaSourceDecompiler decompiler = new ClassFileToJavaSourceDecompiler();
             Printer printer = MinableGems.getPrinter();
@@ -81,25 +77,19 @@ public class MinableGems extends JavaPlugin {
             decompiler.decompile(loader, printer, classPath);
 
             String source = printer.toString();
-            Pattern functionPattern = Pattern.compile("public CustomDrop readCustomDrop\\([^)]*\\)\\s*\\{\\s*CustomDrop customDrop;");
+            Pattern functionPattern = Pattern.compile("public\\s+CustomDrop\\s+readCustomDrop\\s*\\(ConfigurationSection ([^,)]+)[^)]*\\)\\s*\\{\\s*CustomDrop customDrop");
             Matcher matcher = functionPattern.matcher(source);
             if (!matcher.find()) throw new MatchNotFoundException();
-            source = source.substring(0,matcher.end()) + "customDrop = null;" + source.substring(matcher.end()); // append at the middle
+            source = source.substring(0,matcher.end()) + " = null; plugin.getLogger().info(\"HEYYY!!!\")" + source.substring(matcher.end()); // append at the middle
 
+            System.out.println(matcher.group(1)); // you can send "variables" using the RegEx
             System.out.println(source);
+
+            DropReader ignored = Reflect.compile(className, source).create().get(); // we're loading the class first, and once the other plugin call the class it will load this one
         } catch (Exception ex) {
-            this.printConsoleErrorMessage("Error while decompiling MineableGems");
+            this.printConsoleErrorMessage("Error while recompiling MineableGems");
             ex.printStackTrace();
         }
-    }
-
-    private static void compile(String sourceFilePath, String classPath) throws IOException {
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null);
-        Iterable<? extends JavaFileObject> sourcefiles = fileManager.getJavaFileObjects(sourceFilePath);
-        Iterable<String> options = Arrays.asList("-d", classPath);
-        compiler.getTask(null, fileManager, null, options, null, sourcefiles).call();
-        fileManager.close();
     }
 
     /**
@@ -159,11 +149,11 @@ public class MinableGems extends JavaPlugin {
                 String jarPath = internalName.substring(0, internalName.lastIndexOf('/')),
                         classPath = internalName.substring(jarPath.length() + 1);
                 if (!new File(jarPath).exists()) {
-                    System.err.println("The file " + jarPath + " doesn't exists!");
+                    //System.err.println("The file " + jarPath + " doesn't exists!");
                     return false;
                 }
                 else if (MinableGems.getClassFromFile(jarPath, classPath) == null) {
-                    System.err.println("The class " + classPath + " couldn't be found inside " + jarPath);
+                    //System.err.println("The class " + classPath + " couldn't be found inside " + jarPath);
                     return false;
                 }
                 return true;
@@ -201,12 +191,6 @@ public class MinableGems extends JavaPlugin {
             @Override public void startMarker(int type) {}
             @Override public void endMarker(int type) {}
         };
-    }
-
-    private void reloadMGConfig() {
-        // code from Commands > onCommand > reload
-        Main.getInstance().configuration.reloadConfig();
-        new DropReader().reload();
     }
 
     private static Method overrideListener(final Plugin plugin, Class<?> match, String name) throws ListenerNotFoundException {
