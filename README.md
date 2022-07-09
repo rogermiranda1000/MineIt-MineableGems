@@ -7,10 +7,4 @@ Tested with MineableGems **1.11.3**.
 - spigot 1.16.5
 - MineIt
 - MineableGems
-- asm:asm:LATEST (?)
-- io.earcam.wrapped:com.sun.tools.attach:LATEST (link with .jar)
-- (export the natives folder **outside** the .jar)
-
-## Execute dependencies
-- Add the natives folder
-- Run `export JDK_JAVA_OPTIONS="-Djdk.attach.allowAttachSelf=true"`
+- Build [JD-Core](https://github.com/java-decompiler/jd-core) (link it with .jar)
