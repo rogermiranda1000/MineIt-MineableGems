@@ -84,8 +84,8 @@ public class MinableGems extends JavaPlugin {
             if (!matcher.find()) throw new MatchNotFoundException();
             source = source.substring(0,matcher.end()) + " = null; plugin.getLogger().info(\"HEYYY!!!\")" + source.substring(matcher.end()); // append at the middle
 
-            System.out.println(matcher.group(1)); // you can send "variables" using the RegEx
-            System.out.println(source);
+            //System.out.println(matcher.group(1)); // you can send "variables" using the RegEx
+            //System.out.println(source);
 
             File out = new File(className.substring(className.lastIndexOf('.')+1) + ".java");
             FileWriter writer = new FileWriter(out);
@@ -104,6 +104,9 @@ public class MinableGems extends JavaPlugin {
             Error []errors = compile.call();
             if (errors.length > 0) {
                 // TODO try to solve
+                for (Error e : errors) {
+                    System.out.println(e.getErrorLine().substring(0, e.getErrorCharacter()));
+                }
 
                 errors = compile.call();
                 if (errors.length > 0) throw new CompileException("Unable to solve the errors.", errors);
