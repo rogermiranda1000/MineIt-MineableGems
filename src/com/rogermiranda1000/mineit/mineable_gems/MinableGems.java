@@ -17,13 +17,9 @@ import org.jd.core.v1.ClassFileToJavaSourceDecompiler;
 import org.jd.core.v1.api.loader.Loader;
 import org.jd.core.v1.api.loader.LoaderException;
 import org.jd.core.v1.api.printer.Printer;
-import org.joor.Reflect;
 
 import javax.annotation.Nullable;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Enumeration;
@@ -67,14 +63,15 @@ public class MinableGems extends JavaPlugin {
 
         /* Recompile MineableGems */
         try {
-            String className = "me.Mohamad82.MineableGems.Core.DropReader";
-            String classPath = "plugins/MineableGems-1.11.3.jar/" + className; // TODO get name
+            String jarPath = "plugins/MineableGems-1.11.3.jar"; // TODO get name
+            String className = DropReader.class.getName();
+            String classPath = jarPath + "/" + className;
 
             ClassFileToJavaSourceDecompiler decompiler = new ClassFileToJavaSourceDecompiler();
             Printer printer = MinableGems.getPrinter();
             Loader loader = MinableGems.getLoader();
 
-            decompiler.decompile(loader, printer, classPath);
+            decompiler.decompile(loader, printer, classPath); // TODO invalid package
 
             String source = printer.toString();
             Pattern functionPattern = Pattern.compile("public\\s+CustomDrop\\s+readCustomDrop\\s*\\(ConfigurationSection ([^,)]+)[^)]*\\)\\s*\\{\\s*CustomDrop customDrop");
@@ -85,7 +82,16 @@ public class MinableGems extends JavaPlugin {
             System.out.println(matcher.group(1)); // you can send "variables" using the RegEx
             System.out.println(source);
 
-            DropReader ignored = Reflect.compile(className, source).create().get(); // we're loading the class first, and once the other plugin call the class it will load this one
+            File out = new File(jarPath.substring(jarPath.lastIndexOf('.')) + ".java");
+            FileWriter writer = new FileWriter(out);
+            writer.write(source);
+            writer.close();
+
+            System.out.println("Recompiling " + className + "...");
+            // TODO javac -classpath spigot-1.8.jar:plugins/MineableGems-1.11.3.jar DropReader.java
+            Runtime.getRuntime().exec("javac " + out.getName()); // compile
+
+            //Runtime.getRuntime().exec("jar -cf " + jarPath + " " + className.replace('.', '/') + ".class"); // add to the zip again
         } catch (Exception ex) {
             this.printConsoleErrorMessage("Error while recompiling MineableGems");
             ex.printStackTrace();
