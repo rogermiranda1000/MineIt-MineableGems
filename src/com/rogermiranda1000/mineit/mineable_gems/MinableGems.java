@@ -74,6 +74,8 @@ public class MinableGems extends JavaPlugin {
             decompiler.decompile(loader, printer, classPath); // TODO invalid package
 
             String source = printer.toString();
+            // wrong package
+            source = "package " + className.substring(0, className.lastIndexOf('.')) + source.substring(source.indexOf(';'));
             Pattern functionPattern = Pattern.compile("public\\s+CustomDrop\\s+readCustomDrop\\s*\\(ConfigurationSection ([^,)]+)[^)]*\\)\\s*\\{\\s*CustomDrop customDrop");
             Matcher matcher = functionPattern.matcher(source);
             if (!matcher.find()) throw new MatchNotFoundException();
@@ -82,14 +84,20 @@ public class MinableGems extends JavaPlugin {
             System.out.println(matcher.group(1)); // you can send "variables" using the RegEx
             System.out.println(source);
 
-            File out = new File(jarPath.substring(jarPath.lastIndexOf('.')) + ".java");
+            File out = new File(className.substring(className.lastIndexOf('.')+1) + ".java");
             FileWriter writer = new FileWriter(out);
             writer.write(source);
             writer.close();
 
             System.out.println("Recompiling " + className + "...");
-            // TODO javac -classpath spigot-1.8.jar:plugins/MineableGems-1.11.3.jar DropReader.java
-            Runtime.getRuntime().exec("javac " + out.getName()); // compile
+            // TODO classpath
+            Process p = Runtime.getRuntime().exec("javac -classpath spigot-1.8.jar:plugins/MineableGems-1.11.3.jar " + out.getName()); // compile
+            BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+
+            String s;
+            while ((s = stdError.readLine()) != null) {
+                System.out.println(s);
+            }
 
             //Runtime.getRuntime().exec("jar -cf " + jarPath + " " + className.replace('.', '/') + ".class"); // add to the zip again
         } catch (Exception ex) {
