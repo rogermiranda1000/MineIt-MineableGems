@@ -2,6 +2,8 @@ package com.rogermiranda1000.mineit.mineable_gems;
 
 import com.rogermiranda1000.mineit.ListenerNotFoundException;
 import com.rogermiranda1000.mineit.MineIt;
+import com.rogermiranda1000.mineit.mineable_gems.recompiler.CompileException;
+import com.rogermiranda1000.mineit.mineable_gems.recompiler.Error;
 import com.rogermiranda1000.mineit.mineable_gems.recompiler.MatchNotFoundException;
 import me.Mohamad82.MineableGems.Core.DropReader;
 import net.md_5.bungee.api.ChatColor;
@@ -23,6 +25,7 @@ import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Enumeration;
+import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -90,20 +93,40 @@ public class MinableGems extends JavaPlugin {
             writer.close();
 
             System.out.println("Recompiling " + className + "...");
-            // TODO classpath
-            Process p = Runtime.getRuntime().exec("javac -classpath spigot-1.8.jar:plugins/MineableGems-1.11.3.jar " + out.getName()); // compile
-            BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+            Callable<Error[]> compile = ()-> {
+                try {
+                    return MinableGems.compile(out.getName(), new String[]{"spigot-1.8.jar", "plugins/MineableGems-1.11.3.jar"}); // TODO classpath
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return new Error[]{};
+                }
+            };
+            Error []errors = compile.call();
+            if (errors.length > 0) {
+                // TODO try to solve
 
-            String s;
-            while ((s = stdError.readLine()) != null) {
-                System.out.println(s);
+                errors = compile.call();
+                if (errors.length > 0) throw new CompileException("Unable to solve the errors.", errors);
             }
+
 
             //Runtime.getRuntime().exec("jar -cf " + jarPath + " " + className.replace('.', '/') + ".class"); // add to the zip again
         } catch (Exception ex) {
             this.printConsoleErrorMessage("Error while recompiling MineableGems");
             ex.printStackTrace();
         }
+    }
+
+    /**
+     * Compile a .java and get the errors
+     * @param javaFilePath .java path
+     * @param classpaths Dependencies
+     * @return Errors
+     */
+    private static Error []compile(String javaFilePath, String []classpaths) throws IOException {
+        Process p = Runtime.getRuntime().exec("javac -classpath " + String.join(":", classpaths) + " " + javaFilePath); // compile
+        BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+        return Error.getErrors(stdError);
     }
 
     /**
