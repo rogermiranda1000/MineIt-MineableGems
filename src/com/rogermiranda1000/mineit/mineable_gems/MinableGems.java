@@ -87,37 +87,68 @@ public class MinableGems extends JavaPlugin {
             //System.out.println(matcher.group(1)); // you can send "variables" using the RegEx
             //System.out.println(source);
 
-            File out = new File(className.substring(className.lastIndexOf('.')+1) + ".java");
+            final File out = new File(className.substring(className.lastIndexOf('.')+1) + ".java");
             FileWriter writer = new FileWriter(out);
             writer.write(source);
             writer.close();
 
-            System.out.println("Recompiling " + className + "...");
-            Callable<Error[]> compile = ()-> {
-                try {
-                    return MinableGems.compile(out.getName(), new String[]{"spigot-1.8.jar", "plugins/MineableGems-1.11.3.jar"}); // TODO classpath
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    return new Error[]{};
-                }
-            };
-            Error []errors = compile.call();
-            if (errors.length > 0) {
-                // TODO try to solve
-                for (Error e : errors) {
-                    System.out.println(e.getErrorLine().substring(0, e.getErrorCharacter()));
+            try {
+                System.out.println("Recompiling " + className + "...");
+                Callable<Error[]> compile = () -> {
+                    try {
+                        return MinableGems.compile(out.getName(), new String[]{"spigot-1.8.jar", "plugins/MineableGems-1.11.3.jar"}); // TODO classpath
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return new Error[]{};
+                    }
+                };
+                Error[] errors = compile.call();
+                if (errors.length > 0) {
+                    // try to solve the cast errors
+                    for (Error e : errors) {
+                        int index = MinableGems.ordinalIndexOf(source, "\n", e.getLine() - 1);
+                        if (index == -1) throw new CompileException("Line " + e.getLine() + " not found.", e);
+                        //System.out.println(source.substring(index, index+100));
+
+                        Matcher m = e.getPattern().matcher(source.substring(index));
+                        if (!m.find()) throw new CompileException("Can't find error position.", e);
+                        int insertFixIndex = source.substring(0, index + m.end()).lastIndexOf('(') + 1;
+                        source = source.substring(0, insertFixIndex) + "(List<String>)" + source.substring(insertFixIndex);
+                    }
+
+                    // change the file with errors
+                    writer = new FileWriter(out);
+                    writer.write(source);
+                    writer.close();
+
+                    errors = compile.call();
+                    if (errors.length > 0) throw new CompileException("Unable to solve the errors.", errors);
                 }
 
-                errors = compile.call();
-                if (errors.length > 0) throw new CompileException("Unable to solve the errors.", errors);
+
+            } catch (CompileException ex) {
+                out.delete();
+                throw ex;
+            } finally {
+                out.delete();
             }
 
-
+            MinableGems.addClassToJar(jarPath, classPath, out.getName());
             //Runtime.getRuntime().exec("jar -cf " + jarPath + " " + className.replace('.', '/') + ".class"); // add to the zip again
         } catch (Exception ex) {
             this.printConsoleErrorMessage("Error while recompiling MineableGems");
             ex.printStackTrace();
         }
+    }
+
+    /**
+     * @author https://stackoverflow.com/a/3976656/9178470
+     * @return Index of the nth occurance of substr (or -1 if not found)
+     */
+    private static int ordinalIndexOf(String str, String substr, int n) {
+        int pos = str.indexOf(substr);
+        while (--n > 0 && pos != -1) pos = str.indexOf(substr, pos + 1);
+        return pos;
     }
 
     /**
@@ -130,6 +161,18 @@ public class MinableGems extends JavaPlugin {
         Process p = Runtime.getRuntime().exec("javac -classpath " + String.join(":", classpaths) + " " + javaFilePath); // compile
         BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
         return Error.getErrors(stdError);
+    }
+
+    /**
+     * Searches for a class inside a .jar
+     * @param jarPath   .jar path
+     * @param classPath Class#getName()
+     * @param javaFile  File path
+     * @author https://stackoverflow.com/a/2265206/9178470
+     * @author Roger Miranda
+     */
+    private static void addClassToJar(String jarPath, String classPath, String javaFile) throws IOException {
+        // TODO
     }
 
     /**

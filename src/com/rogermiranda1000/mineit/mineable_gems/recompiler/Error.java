@@ -29,7 +29,7 @@ public class Error {
     private final String file;
 
     /**
-     * Line where errorLine is found
+     * Line where errorLine is found (from 1 to n)
      */
     private final int line;
 
@@ -61,7 +61,12 @@ public class Error {
         return this.line;
     }
 
-    private static final Pattern errorPattern = Pattern.compile("([^\\s.]+\\.java):(\\d+): error: ([^\\n]+)[ ]*\\n(\\s*)(\\S.*)\\n([ ]*)\\^");
+    public Pattern getPattern() {
+        String match = Pattern.quote(this.errorLine.substring(0, this.errorCharacter));
+        return Pattern.compile(match);
+    }
+
+    private static final Pattern errorPattern = Pattern.compile("([^\\s.]+\\.java):(\\d+): error: ([^\\n]+)[ ]*\\n([^\\n]*)\\n([ ]*)\\^");
     public static Error []getErrors(String errors) {
         /**
          *  CLASS.java:LINE: error: incompatible types: List<CAP#1> cannot be converted to List<String>
@@ -70,7 +75,7 @@ public class Error {
          */
         Matcher m = errorPattern.matcher(errors);
         ArrayList<Error> list = new ArrayList<>();
-        while (m.find()) list.add(new Error(m.group(1), Integer.parseInt(m.group(2)), m.group(3), m.group(5), m.group(6).length() - m.group(4).length()));
+        while (m.find()) list.add(new Error(m.group(1), Integer.parseInt(m.group(2)), m.group(3), m.group(4), m.group(5).length()));
 
         return list.toArray(new Error[0]);
     }
