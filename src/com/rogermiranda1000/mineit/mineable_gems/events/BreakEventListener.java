@@ -35,9 +35,12 @@ public class BreakEventListener implements Listener {
         Stream<CustomDrop> insideMineIter = dropCandidates.stream().filter((d) -> d instanceof CustomMineDrop).filter((md) -> ((CustomMineDrop)md).getMine().getName().equals(mine == null ? "" : mine.getName())),
                 noMineIter = dropCandidates.stream().filter((d) -> !(d instanceof CustomMineDrop));
 
-        insideMineIter.forEach((d) -> System.out.println(d.getDrop().getType().name()));
-        noMineIter.forEach((d) -> System.out.println(d.getDrop().getType().name()));
+        synchronized (BreakEventListener.class) {
+            // TODO change Main.getInstance().gems
+            insideMineIter.forEach((d) -> System.out.println(d.getDrop().getType().name()));
+            noMineIter.forEach((d) -> System.out.println(d.getDrop().getType().name()));
 
-        this.mineableGemsBreakEvent.onBlockBreak(e);
+            this.mineableGemsBreakEvent.onBlockBreak(e);
+        }
     }
 }

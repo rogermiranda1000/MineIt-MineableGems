@@ -2,10 +2,15 @@ package com.rogermiranda1000.mineit.mineable_gems;
 
 import com.rogermiranda1000.mineit.ListenerNotFoundException;
 import com.rogermiranda1000.mineit.MineIt;
+import com.rogermiranda1000.mineit.MineItApi;
+import com.rogermiranda1000.mineit.mineable_gems.events.BreakEventListener;
 import com.rogermiranda1000.mineit.mineable_gems.recompiler.CompileException;
 import com.rogermiranda1000.mineit.mineable_gems.recompiler.Error;
+import com.rogermiranda1000.mineit.mineable_gems.recompiler.JarHelper;
 import com.rogermiranda1000.mineit.mineable_gems.recompiler.MatchNotFoundException;
 import me.Mohamad82.MineableGems.Core.DropReader;
+import me.Mohamad82.MineableGems.Events.BreakEvent;
+import me.Mohamad82.MineableGems.Main;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
@@ -13,6 +18,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredListener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jd.core.v1.ClassFileToJavaSourceDecompiler;
@@ -20,16 +26,12 @@ import org.jd.core.v1.api.loader.Loader;
 import org.jd.core.v1.api.loader.LoaderException;
 import org.jd.core.v1.api.printer.Printer;
 
-import javax.annotation.Nullable;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Enumeration;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 public class MinableGems extends JavaPlugin {
     public void printConsoleErrorMessage(String msg) {
@@ -42,28 +44,6 @@ public class MinableGems extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        // TODO load after
-        /*PluginManager pm = getServer().getPluginManager();
-        Plugin mineableGems = pm.getPlugin("MineableGems");
-        Main mineableGemsObject = Main.getInstance();
-        MineItApi mineItObject = MineItApi.getInstance();
-
-        // override BlockBreakEvent
-        try {
-            final Method mineableGemsOnBreakMethod = MinableGems.overrideListener(mineableGems, BreakEvent.class, "onBlockBreak");
-            final Listener mineableGemsBreakListener = MinableGems.getListener(mineableGems, BreakEvent.class);
-            this.getServer().getPluginManager().registerEvents(
-                    new BreakEventListener((e) -> {
-                        try {
-                            mineableGemsOnBreakMethod.invoke(mineableGemsBreakListener, e);
-                        } catch (IllegalAccessException | InvocationTargetException ex) {
-                            ex.printStackTrace();
-                        }
-                    }, mineItObject, mineableGemsObject), this);
-        } catch (ListenerNotFoundException ex) {
-            ex.printStackTrace();
-        }*/
-
         /* Recompile MineableGems */
         try {
             String jarPath = "plugins/MineableGems-1.11.3.jar"; // TODO get name
@@ -91,12 +71,13 @@ public class MinableGems extends JavaPlugin {
             FileWriter writer = new FileWriter(out);
             writer.write(source);
             writer.close();
+            File compiled = new File(className.substring(className.lastIndexOf('.')+1) + ".class"); // the output file have the same name, but .class
 
             try {
                 System.out.println("Recompiling " + className + "...");
                 Callable<Error[]> compile = () -> {
                     try {
-                        return MinableGems.compile(out.getName(), new String[]{"spigot-1.8.jar", "plugins/MineableGems-1.11.3.jar"}); // TODO classpath
+                        return MinableGems.compile(out.getName(), new String[]{"spigot-1.8.jar", "plugins/MineableGems-1.11.3.jar"}, "1.8"); // TODO classpath
                     } catch (IOException e) {
                         e.printStackTrace();
                         return new Error[]{};
@@ -125,20 +106,43 @@ public class MinableGems extends JavaPlugin {
                     if (errors.length > 0) throw new CompileException("Unable to solve the errors.", errors);
                 }
 
-
-            } catch (CompileException ex) {
+                if (!JarHelper.addClassToJar(jarPath, className, compiled.getName())) throw new CompileException("Class " + className + " not found inside " + jarPath);
+            } catch (CompileException | IOException ex) {
                 out.delete();
+                if (compiled.exists()) compiled.delete();
                 throw ex;
             } finally {
                 out.delete();
+                if (compiled.exists()) compiled.delete();
             }
-
-            MinableGems.addClassToJar(jarPath, classPath, out.getName());
-            //Runtime.getRuntime().exec("jar -cf " + jarPath + " " + className.replace('.', '/') + ".class"); // add to the zip again
         } catch (Exception ex) {
             this.printConsoleErrorMessage("Error while recompiling MineableGems");
             ex.printStackTrace();
         }
+
+        // load after MineableGems
+        Bukkit.getScheduler().scheduleSyncDelayedTask(this, ()-> {
+            PluginManager pm = getServer().getPluginManager();
+            Plugin mineableGems = pm.getPlugin("MineableGems");
+            Main mineableGemsObject = Main.getInstance();
+            MineItApi mineItObject = MineItApi.getInstance();
+
+            // override BlockBreakEvent
+            try {
+                final Method mineableGemsOnBreakMethod = MinableGems.overrideListener(mineableGems, BreakEvent.class, "onBlockBreak");
+                final Listener mineableGemsBreakListener = MinableGems.getListener(mineableGems, BreakEvent.class);
+                this.getServer().getPluginManager().registerEvents(
+                        new BreakEventListener((e) -> {
+                            try {
+                                mineableGemsOnBreakMethod.invoke(mineableGemsBreakListener, e);
+                            } catch (IllegalAccessException | InvocationTargetException ex) {
+                                ex.printStackTrace();
+                            }
+                        }, mineItObject, mineableGemsObject), this);
+            } catch (ListenerNotFoundException ex) {
+                ex.printStackTrace();
+            }
+        }, 1);
     }
 
     /**
@@ -154,50 +158,14 @@ public class MinableGems extends JavaPlugin {
     /**
      * Compile a .java and get the errors
      * @param javaFilePath .java path
-     * @param classpaths Dependencies
-     * @return Errors
+     * @param classpaths    Dependencies
+     * @param version       Java compile version (1.8 for Java 8)
+     * @return Errors; the compiled class is in ./<javaFilePath name>.class
      */
-    private static Error []compile(String javaFilePath, String []classpaths) throws IOException {
-        Process p = Runtime.getRuntime().exec("javac -classpath " + String.join(":", classpaths) + " " + javaFilePath); // compile
+    private static Error []compile(String javaFilePath, String []classpaths, String version) throws IOException {
+        Process p = Runtime.getRuntime().exec("javac -source " + version + " -target " + version + " -classpath " + ((classpaths.length == 0) ? "." : (".:" + String.join(":", classpaths))) + " " + javaFilePath); // compile
         BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
         return Error.getErrors(stdError);
-    }
-
-    /**
-     * Searches for a class inside a .jar
-     * @param jarPath   .jar path
-     * @param classPath Class#getName()
-     * @param javaFile  File path
-     * @author https://stackoverflow.com/a/2265206/9178470
-     * @author Roger Miranda
-     */
-    private static void addClassToJar(String jarPath, String classPath, String javaFile) throws IOException {
-        // TODO
-    }
-
-    /**
-     * Searches for a class inside a .jar
-     * @param jarPath   .jar path
-     * @param classPath Class#getName()
-     * @return InputStream of the class; null if not found
-     */
-    @Nullable
-    private static InputStream getClassFromFile(String jarPath, String classPath) {
-        try {
-            ZipFile zipFile = new ZipFile(jarPath);
-            Enumeration<? extends ZipEntry> entries = zipFile.entries();
-
-            classPath = classPath.replace('.', '/')  + ".class";
-
-            while(entries.hasMoreElements()){
-                ZipEntry entry = entries.nextElement();
-                if (entry.getName().equals(classPath)) return zipFile.getInputStream(entry);
-            }
-            // TODO zipFile.close() ?
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        return null;
     }
 
     private static Loader getLoader() {
@@ -206,7 +174,7 @@ public class MinableGems extends JavaPlugin {
             public byte[] load(String internalName) throws LoaderException {
                 String jarPath = internalName.substring(0, internalName.lastIndexOf('/')),
                     classPath = internalName.substring(jarPath.length() + 1);
-                InputStream is = MinableGems.getClassFromFile(jarPath,  classPath);
+                InputStream is = JarHelper.getClassFromFile(jarPath,  classPath);
 
                 if (is == null) {
                     return null;
@@ -220,8 +188,10 @@ public class MinableGems extends JavaPlugin {
                             read = in.read(buffer);
                         }
 
+                        JarHelper.closeInputStream(is);
                         return out.toByteArray();
                     } catch (IOException e) {
+                        JarHelper.closeInputStream(is);
                         throw new LoaderException(e);
                     }
                 }
@@ -231,14 +201,16 @@ public class MinableGems extends JavaPlugin {
             public boolean canLoad(String internalName) {
                 String jarPath = internalName.substring(0, internalName.lastIndexOf('/')),
                         classPath = internalName.substring(jarPath.length() + 1);
+                InputStream is;
                 if (!new File(jarPath).exists()) {
                     //System.err.println("The file " + jarPath + " doesn't exists!");
                     return false;
                 }
-                else if (MinableGems.getClassFromFile(jarPath, classPath) == null) {
+                else if ((is = JarHelper.getClassFromFile(jarPath, classPath)) == null) {
                     //System.err.println("The class " + classPath + " couldn't be found inside " + jarPath);
                     return false;
                 }
+                JarHelper.closeInputStream(is);
                 return true;
             }
         };
