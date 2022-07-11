@@ -4,10 +4,8 @@ import com.rogermiranda1000.mineit.ListenerNotFoundException;
 import com.rogermiranda1000.mineit.MineIt;
 import com.rogermiranda1000.mineit.MineItApi;
 import com.rogermiranda1000.mineit.mineable_gems.events.BreakEventListener;
-import com.rogermiranda1000.mineit.mineable_gems.recompiler.CompileException;
+import com.rogermiranda1000.mineit.mineable_gems.recompiler.*;
 import com.rogermiranda1000.mineit.mineable_gems.recompiler.Error;
-import com.rogermiranda1000.mineit.mineable_gems.recompiler.JarHelper;
-import com.rogermiranda1000.mineit.mineable_gems.recompiler.MatchNotFoundException;
 import me.Mohamad82.MineableGems.Core.DropReader;
 import me.Mohamad82.MineableGems.Events.BreakEvent;
 import me.Mohamad82.MineableGems.Main;
@@ -21,17 +19,10 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredListener;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jd.core.v1.ClassFileToJavaSourceDecompiler;
-import org.jd.core.v1.api.loader.Loader;
-import org.jd.core.v1.api.loader.LoaderException;
-import org.jd.core.v1.api.printer.Printer;
 
-import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class MinableGems extends JavaPlugin {
     public void printConsoleErrorMessage(String msg) {
@@ -48,73 +39,36 @@ public class MinableGems extends JavaPlugin {
         try {
             String jarPath = "plugins/MineableGems-1.11.3.jar"; // TODO get name
             String className = DropReader.class.getName();
-            String classPath = jarPath + "/" + className;
+            String[] compileClasspaths = new String[]{"spigot-1.8.jar", "plugins/MineableGems-1.11.3.jar"};
 
-            ClassFileToJavaSourceDecompiler decompiler = new ClassFileToJavaSourceDecompiler();
-            Printer printer = MinableGems.getPrinter();
-            Loader loader = MinableGems.getLoader();
+            System.out.println("Recompiling " + className + "...");
+            new JavaRecompiler(new JDCodeDecompiler(),
+                        new CodeReplacer[]{
+                                new RegexCodeReplacer(
+                                        "public\\s+CustomDrop\\s+readCustomDrop\\s*\\(ConfigurationSection ([^,)]+)[^)]*\\)\\s*\\{\\s*CustomDrop customDrop",
+                                        (groups) -> " = null; plugin.getLogger().info(\"HEYYY!!!\")",
+                                        true,
+                                        true
+                                )
+                        },
+                        new RuntimeCompiler(),
+                        (code, errors) -> {
+                            // we're assuming it's cast error, and needs to be casted into List<String>
+                            for (Error e : errors) {
+                                int index = MinableGems.ordinalIndexOf(code, "\n", e.getLine() - 1);
+                                if (index == -1) throw new CompileException("Line " + e.getLine() + " not found.", e);
+                                //System.out.println(source.substring(index, index+100));
 
-            decompiler.decompile(loader, printer, classPath); // TODO invalid package
+                                Matcher m = e.getPattern().matcher(code.substring(index));
+                                if (!m.find()) throw new CompileException("Can't find error position.", e);
+                                int insertFixIndex = code.substring(0, index + m.end()).lastIndexOf('(') + 1;
+                                code = code.substring(0, insertFixIndex) + "(List<String>)" + code.substring(insertFixIndex);
+                            }
+                            return code;
+                        }
+                    ).recompile(jarPath, className, compileClasspaths, JavaRecompiler.JAVA_8);
 
-            String source = printer.toString();
-            // wrong package
-            source = "package " + className.substring(0, className.lastIndexOf('.')) + source.substring(source.indexOf(';'));
-            Pattern functionPattern = Pattern.compile("public\\s+CustomDrop\\s+readCustomDrop\\s*\\(ConfigurationSection ([^,)]+)[^)]*\\)\\s*\\{\\s*CustomDrop customDrop");
-            Matcher matcher = functionPattern.matcher(source);
-            if (!matcher.find()) throw new MatchNotFoundException();
-            source = source.substring(0,matcher.end()) + " = null; plugin.getLogger().info(\"HEYYY!!!\")" + source.substring(matcher.end()); // append at the middle
-
-            //System.out.println(matcher.group(1)); // you can send "variables" using the RegEx
-            //System.out.println(source);
-
-            final File out = new File(className.substring(className.lastIndexOf('.')+1) + ".java");
-            FileWriter writer = new FileWriter(out);
-            writer.write(source);
-            writer.close();
-            File compiled = new File(className.substring(className.lastIndexOf('.')+1) + ".class"); // the output file have the same name, but .class
-
-            try {
-                System.out.println("Recompiling " + className + "...");
-                Callable<Error[]> compile = () -> {
-                    try {
-                        return MinableGems.compile(out.getName(), new String[]{"spigot-1.8.jar", "plugins/MineableGems-1.11.3.jar"}, "1.8"); // TODO classpath
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        return new Error[]{};
-                    }
-                };
-                Error[] errors = compile.call();
-                if (errors.length > 0) {
-                    // try to solve the cast errors
-                    for (Error e : errors) {
-                        int index = MinableGems.ordinalIndexOf(source, "\n", e.getLine() - 1);
-                        if (index == -1) throw new CompileException("Line " + e.getLine() + " not found.", e);
-                        //System.out.println(source.substring(index, index+100));
-
-                        Matcher m = e.getPattern().matcher(source.substring(index));
-                        if (!m.find()) throw new CompileException("Can't find error position.", e);
-                        int insertFixIndex = source.substring(0, index + m.end()).lastIndexOf('(') + 1;
-                        source = source.substring(0, insertFixIndex) + "(List<String>)" + source.substring(insertFixIndex);
-                    }
-
-                    // change the file with errors
-                    writer = new FileWriter(out);
-                    writer.write(source);
-                    writer.close();
-
-                    errors = compile.call();
-                    if (errors.length > 0) throw new CompileException("Unable to solve the errors.", errors);
-                }
-
-                if (!JarHelper.addClassToJar(jarPath, className, compiled.getName())) throw new CompileException("Class " + className + " not found inside " + jarPath);
-            } catch (CompileException | IOException ex) {
-                out.delete();
-                if (compiled.exists()) compiled.delete();
-                throw ex;
-            } finally {
-                out.delete();
-                if (compiled.exists()) compiled.delete();
-            }
+            // TODO reload plugin
         } catch (Exception ex) {
             this.printConsoleErrorMessage("Error while recompiling MineableGems");
             ex.printStackTrace();
@@ -142,7 +96,7 @@ public class MinableGems extends JavaPlugin {
             } catch (ListenerNotFoundException ex) {
                 ex.printStackTrace();
             }
-        }, 1);
+        }, 2L);
     }
 
     /**
@@ -153,99 +107,6 @@ public class MinableGems extends JavaPlugin {
         int pos = str.indexOf(substr);
         while (--n > 0 && pos != -1) pos = str.indexOf(substr, pos + 1);
         return pos;
-    }
-
-    /**
-     * Compile a .java and get the errors
-     * @param javaFilePath .java path
-     * @param classpaths    Dependencies
-     * @param version       Java compile version (1.8 for Java 8)
-     * @return Errors; the compiled class is in ./<javaFilePath name>.class
-     */
-    private static Error []compile(String javaFilePath, String []classpaths, String version) throws IOException {
-        Process p = Runtime.getRuntime().exec("javac -source " + version + " -target " + version + " -classpath " + ((classpaths.length == 0) ? "." : (".:" + String.join(":", classpaths))) + " " + javaFilePath); // compile
-        BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-        return Error.getErrors(stdError);
-    }
-
-    private static Loader getLoader() {
-        return new Loader() {
-            @Override
-            public byte[] load(String internalName) throws LoaderException {
-                String jarPath = internalName.substring(0, internalName.lastIndexOf('/')),
-                    classPath = internalName.substring(jarPath.length() + 1);
-                InputStream is = JarHelper.getClassFromFile(jarPath,  classPath);
-
-                if (is == null) {
-                    return null;
-                } else {
-                    try (InputStream in = is; ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-                        byte[] buffer = new byte[1024];
-                        int read = in.read(buffer);
-
-                        while (read > 0) {
-                            out.write(buffer, 0, read);
-                            read = in.read(buffer);
-                        }
-
-                        JarHelper.closeInputStream(is);
-                        return out.toByteArray();
-                    } catch (IOException e) {
-                        JarHelper.closeInputStream(is);
-                        throw new LoaderException(e);
-                    }
-                }
-            }
-
-            @Override
-            public boolean canLoad(String internalName) {
-                String jarPath = internalName.substring(0, internalName.lastIndexOf('/')),
-                        classPath = internalName.substring(jarPath.length() + 1);
-                InputStream is;
-                if (!new File(jarPath).exists()) {
-                    //System.err.println("The file " + jarPath + " doesn't exists!");
-                    return false;
-                }
-                else if ((is = JarHelper.getClassFromFile(jarPath, classPath)) == null) {
-                    //System.err.println("The class " + classPath + " couldn't be found inside " + jarPath);
-                    return false;
-                }
-                JarHelper.closeInputStream(is);
-                return true;
-            }
-        };
-    }
-
-    private static Printer getPrinter() {
-        return new Printer() {
-            protected static final String TAB = "  ";
-            protected static final String NEWLINE = "\n";
-
-            protected int indentationCount = 0;
-            protected StringBuilder sb = new StringBuilder();
-
-            @Override public String toString() { return sb.toString(); }
-
-            @Override public void start(int maxLineNumber, int majorVersion, int minorVersion) {}
-            @Override public void end() {}
-
-            @Override public void printText(String text) { sb.append(text); }
-            @Override public void printNumericConstant(String constant) { sb.append(constant); }
-            @Override public void printStringConstant(String constant, String ownerInternalName) { sb.append(constant); }
-            @Override public void printKeyword(String keyword) { sb.append(keyword); }
-            @Override public void printDeclaration(int type, String internalTypeName, String name, String descriptor) { sb.append(name); }
-            @Override public void printReference(int type, String internalTypeName, String name, String descriptor, String ownerInternalName) { sb.append(name); }
-
-            @Override public void indent() { this.indentationCount++; }
-            @Override public void unindent() { this.indentationCount--; }
-
-            @Override public void startLine(int lineNumber) { for (int i=0; i<indentationCount; i++) sb.append(TAB); }
-            @Override public void endLine() { sb.append(NEWLINE); }
-            @Override public void extraLine(int count) { while (count-- > 0) sb.append(NEWLINE); }
-
-            @Override public void startMarker(int type) {}
-            @Override public void endMarker(int type) {}
-        };
     }
 
     private static Method overrideListener(final Plugin plugin, Class<?> match, String name) throws ListenerNotFoundException {
