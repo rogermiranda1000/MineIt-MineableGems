@@ -43,7 +43,7 @@ public class MinableGems extends RogerPlugin {
     }
 
     @Override
-    public String getPluginID() { return null; }
+    public String getPluginID() { return "103464"; }
 
     @Nullable
     private static String getJarPath(Class<?> c) {
