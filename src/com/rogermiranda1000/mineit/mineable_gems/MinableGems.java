@@ -8,6 +8,7 @@ import com.rogermiranda1000.mineit.MineItApi;
 import com.rogermiranda1000.mineit.mineable_gems.events.BreakEventListener;
 import com.rogermiranda1000.mineit.mineable_gems.recompiler.*;
 import com.rogermiranda1000.mineit.mineable_gems.recompiler.Error;
+import com.rogermiranda1000.versioncontroller.VersionController;
 import me.Mohamad82.MineableGems.Core.DropReader;
 import me.Mohamad82.MineableGems.Events.BreakEvent;
 import me.Mohamad82.MineableGems.Main;
@@ -20,6 +21,7 @@ import org.bukkit.plugin.PluginManager;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URISyntaxException;
 import java.util.regex.Matcher;
 
 public class MinableGems extends RogerPlugin {
@@ -36,9 +38,7 @@ public class MinableGems extends RogerPlugin {
     }
 
     @Override
-    public String getPluginID() {
-        return null;
-    }
+    public String getPluginID() { return null; }
 
     @SuppressWarnings("ConstantConditions") // ignore NPE
     @Override
@@ -46,10 +46,17 @@ public class MinableGems extends RogerPlugin {
         super.onEnable();
 
         /* Recompile MineableGems */
-        String jarPath = "plugins/MineableGems-1.11.3.jar"; // TODO get name
         String className = DropReader.class.getName();
-        String[] compileClasspaths = new String[]{"spigot-1.8.jar", "plugins/MineableGems-1.11.3.jar"};
         try {
+            String jarPath = DropReader.class.
+                    getProtectionDomain()
+                    .getCodeSource()
+                    .getLocation()
+                    .toURI()
+                    .getPath();
+
+            String[] compileClasspaths = new String[]{VersionController.runningJarPath, jarPath};
+
             getLogger().info("Recompiling " + className + "...");
             new JavaRecompiler(new JDCodeDecompiler(),
                         new CodeReplacer[]{
@@ -66,7 +73,7 @@ public class MinableGems extends RogerPlugin {
                             for (Error e : errors) {
                                 int index = MinableGems.ordinalIndexOf(code, "\n", e.getLine() - 1);
                                 if (index == -1) throw new CompileException("Line " + e.getLine() + " not found.", e);
-                                //System.out.println(source.substring(index, index+100));
+                                //this.getLogger().info("Fixing line " + e.getLine() + "...");
 
                                 Matcher m = e.getPattern().matcher(code.substring(index));
                                 if (!m.find()) throw new CompileException("Can't find error position.", e);
@@ -74,8 +81,8 @@ public class MinableGems extends RogerPlugin {
                                 code = code.substring(0, insertFixIndex) + "(List<String>)" + code.substring(insertFixIndex);
                             }
                             return code;
-                        }
-                    ).recompile(jarPath, className, compileClasspaths, JavaRecompiler.JAVA_8);
+                        }, true)
+                    .recompile(jarPath, className, compileClasspaths, JavaRecompiler.JAVA_8);
 
             getLogger().info(className + " compiled, the server must be restarted.");
             getServer().reload();

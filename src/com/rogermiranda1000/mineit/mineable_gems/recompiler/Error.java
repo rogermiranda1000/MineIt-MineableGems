@@ -86,6 +86,6 @@ public class Error {
 
     @Override
     public String toString() {
-        return this.file + ":" + this.line + " - " + this.error;
+        return this.file + ":" + this.line + " (" + this.errorCharacter + ") - " + this.error;
     }
 }
