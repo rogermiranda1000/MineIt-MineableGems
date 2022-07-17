@@ -48,12 +48,6 @@ public class BreakEventListener implements Listener {
         insideMineIter.sequential().collect(Collectors.toCollection(() -> drops));
         noMineIter.sequential().collect(Collectors.toCollection(() -> drops));
 
-        // debug
-        for(CustomDrop cd : drops) {
-            if (cd instanceof CustomMineDrop) System.out.print("(mine) ");
-            System.out.println(cd.getDrop().getType().name());
-        }
-
         synchronized (BreakEventListener.class) {
             this.mineableGemsObject.gems.put(mined, drops); // override the drops
 
