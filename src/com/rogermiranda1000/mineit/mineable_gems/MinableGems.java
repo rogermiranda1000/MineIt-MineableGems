@@ -80,7 +80,10 @@ public class MinableGems extends RogerPlugin {
                                         "public\\s+CustomDrop\\s+readCustomDrop\\s*\\(ConfigurationSection ([^,)]+)[^)]*\\)\\s*\\{[\\s\\S]*=\\s*(?=new CustomDrop\\((.+)\\);)",
                                         (groups) -> groups[0] + ".contains(\"Mine\") ? new CustomMineDrop(" + groups[0] + ".getString(\"Mine\"), " + groups[1] + ") : ", // inserted between '=' and 'new CustomDrop'
                                         true, false
-                                )
+                                ),
+                                new RegexCodeReplacer("(?=DropReader\\.plugin\\.gems\\.put\\(([^,]+),([^)]+))",
+                                        (groups) -> "if (DropReader.plugin.gems.get(" + groups[0] + ") != null) " + groups[1] + ".addAll(DropReader.plugin.gems.get(" + groups[0] + "));",
+                                        true, true)
                         },
                         new RuntimeCompiler(),
                         (code, errors) -> {
