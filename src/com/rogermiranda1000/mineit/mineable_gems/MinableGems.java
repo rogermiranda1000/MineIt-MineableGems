@@ -26,6 +26,7 @@ import org.bukkit.plugin.PluginManager;
 
 import javax.annotation.Nullable;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.regex.Matcher;
 
 public class MinableGems extends RogerPlugin {
@@ -76,6 +77,7 @@ public class MinableGems extends RogerPlugin {
             new JavaRecompiler(new JDCodeDecompiler(),
                         new CodeReplacer[]{
                                 new DependenciesImporter(CustomMineDrop.class),
+                                new DependenciesImporter(List.class), // for some reason, in >1.13 it doesn't exist
                                 new RegexCodeReplacer(
                                         "public\\s+CustomDrop\\s+readCustomDrop\\s*\\(ConfigurationSection ([^,)]+)[^)]*\\)\\s*\\{[\\s\\S]*=\\s*(?=new CustomDrop\\((.+)\\);)",
                                         (groups) -> groups[0] + ".contains(\"Mine\") ? new CustomMineDrop(" + groups[0] + ".getString(\"Mine\"), " + groups[1] + ") : ", // inserted between '=' and 'new CustomDrop'
@@ -101,7 +103,7 @@ public class MinableGems extends RogerPlugin {
                             }
                             return code;
                         }, true)
-                    .recompile(originalJarPath, className, compileClasspaths, JavaRecompiler.JAVA_8);
+                    .recompile(originalJarPath, className, compileClasspaths, RuntimeCompiler.JAVA_8);
 
             getLogger().info(className + " compiled, the server must be restarted.");
             Bukkit.getScheduler().scheduleSyncDelayedTask(this, ()->getServer().reload(), 1L); // reload once all is loaded

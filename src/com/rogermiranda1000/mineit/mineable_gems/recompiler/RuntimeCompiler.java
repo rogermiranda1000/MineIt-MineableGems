@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.InputStreamReader;
 
 public class RuntimeCompiler implements JavaCompiler {
+    public static final String JAVA_8 = "1.8";
+
     public RuntimeCompiler() { }
 
     /**
