@@ -4,10 +4,14 @@ import com.rogermiranda1000.helper.CustomCommand;
 import com.rogermiranda1000.helper.RogerPlugin;
 import com.rogermiranda1000.helper.reflection.OnServerEvent;
 import com.rogermiranda1000.helper.reflection.SpigotEventOverrider;
+import com.rogermiranda1000.mineit.Mine;
 import com.rogermiranda1000.mineit.MineItApi;
 import com.rogermiranda1000.mineit.mineable_gems.events.BreakEventListener;
 import com.rogermiranda1000.mineit.mineable_gems.recompiler.*;
 import com.rogermiranda1000.mineit.mineable_gems.recompiler.Error;
+import com.rogermiranda1000.mineit.mineable_gems.recompiler.replacers.CodeReplacer;
+import com.rogermiranda1000.mineit.mineable_gems.recompiler.replacers.DependenciesImporter;
+import com.rogermiranda1000.mineit.mineable_gems.recompiler.replacers.RegexCodeReplacer;
 import com.rogermiranda1000.versioncontroller.Version;
 import com.rogermiranda1000.versioncontroller.VersionController;
 import me.Mohamad82.MineableGems.Core.DropReader;
@@ -16,15 +20,11 @@ import me.Mohamad82.MineableGems.Events.BreakEvent_Legacy;
 import me.Mohamad82.MineableGems.Main;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
-import org.bukkit.event.HandlerList;
-import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
-import org.bukkit.plugin.RegisteredListener;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import javax.annotation.Nullable;
 import java.net.URISyntaxException;
 import java.util.regex.Matcher;
 
@@ -44,6 +44,19 @@ public class MinableGems extends RogerPlugin {
     @Override
     public String getPluginID() { return null; }
 
+    @Nullable
+    private static String getJarPath(Class<?> c) {
+        try {
+            return c.getProtectionDomain()
+                    .getCodeSource()
+                    .getLocation()
+                    .toURI()
+                    .getPath();
+        } catch (URISyntaxException e) {
+            return null;
+        }
+    }
+
     @SuppressWarnings("ConstantConditions") // ignore NPE
     @Override
     public void onEnable() {
@@ -52,32 +65,34 @@ public class MinableGems extends RogerPlugin {
         /* Recompile MineableGems */
         String className = DropReader.class.getName();
         try {
-            String jarPath = DropReader.class.
-                    getProtectionDomain()
-                    .getCodeSource()
-                    .getLocation()
-                    .toURI()
-                    .getPath();
+            String originalJarPath = MinableGems.getJarPath(DropReader.class),
+                    thisJarPath = MinableGems.getJarPath(this.getClass()),
+                    mineItJarPath = MinableGems.getJarPath(Mine.class);
 
-            String[] compileClasspaths = new String[]{VersionController.runningJarPath, jarPath};
+
+            String[] compileClasspaths = new String[]{VersionController.runningJarPath, originalJarPath, thisJarPath, mineItJarPath};
 
             getLogger().info("Recompiling " + className + "...");
             new JavaRecompiler(new JDCodeDecompiler(),
                         new CodeReplacer[]{
+                                new DependenciesImporter(CustomMineDrop.class),
                                 new RegexCodeReplacer(
-                                        "public\\s+CustomDrop\\s+readCustomDrop\\s*\\(ConfigurationSection ([^,)]+)[^)]*\\)\\s*\\{\\s*CustomDrop customDrop",
-                                        (groups) -> " = null; plugin.getLogger().info(\"HEYYY!!!\")",
-                                        true,
-                                        true
-                                )
+                                        "public\\s+CustomDrop\\s+readCustomDrop\\s*\\(ConfigurationSection ([^,)]+)[^)]*\\)\\s*\\{[\\s\\S]*=\\s*(?=new CustomDrop\\((.+)\\);)",
+                                        (groups) -> groups[0] + ".contains(\"Mine\") ? new CustomMineDrop(" + groups[0] + ".getString(\"Mine\"), " + groups[1] + ") : ", // inserted between '=' and 'new CustomDrop'
+                                        true, false
+                                )/*,
+                                new RegexCodeReplacer("(?=plugin\\.gems\\.put\\(([^,]+),([^)]+))",
+                                        (groups) -> "if (plugin.gems.get(" + groups[0] + ") != null) " + groups[1] + ".addAll(DropReader.plugin.gems.get(" + groups[0] + "));",
+                                        true, true)*/
                         },
                         new RuntimeCompiler(),
                         (code, errors) -> {
-                            // we're assuming it's cast error, and needs to be casted into List<String>
                             for (Error e : errors) {
+                                //this.getLogger().info("Fixing line " + e.getLine() + "(" + e.getError() + ")...");
+                                if (!e.getError().startsWith("incompatible types: ") || !e.getError().endsWith(" cannot be converted to List<String>")) continue; // we don't know how to solve it
+
                                 int index = MinableGems.ordinalIndexOf(code, "\n", e.getLine() - 1);
                                 if (index == -1) throw new CompileException("Line " + e.getLine() + " not found.", e);
-                                //this.getLogger().info("Fixing line " + e.getLine() + "...");
 
                                 Matcher m = e.getPattern().matcher(code.substring(index));
                                 if (!m.find()) throw new CompileException("Can't find error position.", e);
@@ -86,7 +101,7 @@ public class MinableGems extends RogerPlugin {
                             }
                             return code;
                         }, true)
-                    .recompile(jarPath, className, compileClasspaths, JavaRecompiler.JAVA_8);
+                    .recompile(originalJarPath, className, compileClasspaths, JavaRecompiler.JAVA_8);
 
             getLogger().info(className + " compiled, the server must be restarted.");
             Bukkit.getScheduler().scheduleSyncDelayedTask(this, ()->getServer().reload(), 1L); // reload once all is loaded

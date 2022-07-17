@@ -1,5 +1,7 @@
 package com.rogermiranda1000.mineit.mineable_gems.recompiler;
 
+import com.rogermiranda1000.mineit.mineable_gems.recompiler.replacers.CodeReplacer;
+import com.rogermiranda1000.mineit.mineable_gems.recompiler.replacers.RegexCodeReplacer;
 import org.bukkit.craftbukkit.libs.jline.internal.Nullable;
 
 import java.io.File;
@@ -14,7 +16,7 @@ public class JavaRecompiler {
 
     private final JavaDecompiler decompiler;
     private final JavaCompiler compiler;
-    private final CodeReplacer []replacers;
+    private final CodeReplacer[]replacers;
     private final CompilationErrorFixer fixer;
 
     /**

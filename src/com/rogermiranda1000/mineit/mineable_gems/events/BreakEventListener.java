@@ -3,6 +3,7 @@ package com.rogermiranda1000.mineit.mineable_gems.events;
 import com.rogermiranda1000.mineit.Mine;
 import com.rogermiranda1000.mineit.MineItApi;
 import com.rogermiranda1000.mineit.mineable_gems.CustomMineDrop;
+import com.sun.istack.internal.NotNull;
 import me.Mohamad82.MineableGems.Core.CustomDrop;
 import me.Mohamad82.MineableGems.Main;
 import org.bukkit.block.Block;
@@ -11,7 +12,9 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class BreakEventListener implements Listener {
@@ -19,7 +22,7 @@ public class BreakEventListener implements Listener {
     private final Main mineableGemsObject;
     private final BreakEvent mineableGemsBreakEvent;
 
-    public BreakEventListener(BreakEvent mineableGemsBreakEvent, MineItApi mineItApiObject, Main mineableGemsObject) {
+    public BreakEventListener(BreakEvent mineableGemsBreakEvent, @NotNull MineItApi mineItApiObject, @NotNull Main mineableGemsObject) {
         this.mineableGemsBreakEvent = mineableGemsBreakEvent;
         this.mineItApiObject = mineItApiObject;
         this.mineableGemsObject = mineableGemsObject;
@@ -31,16 +34,32 @@ public class BreakEventListener implements Listener {
         Block block = e.getBlock();
         final Mine mine = this.mineItApiObject.getMine(block);
         String mined = block.getType().toString();
-        List<CustomDrop> dropCandidates = this.mineableGemsObject.gems.get(mined);
-        Stream<CustomDrop> insideMineIter = dropCandidates.stream().filter((d) -> d instanceof CustomMineDrop).filter((md) -> ((CustomMineDrop)md).getMine().getName().equals(mine == null ? "" : mine.getName())),
+        List<CustomDrop> dropCandidates;
+        synchronized (BreakEventListener.class) {
+            dropCandidates = this.mineableGemsObject.gems.get(mined);
+        }
+        if (dropCandidates == null) return; // any block of that type
+        Stream<CustomDrop> insideMineIter = dropCandidates.stream().filter((d) -> d instanceof CustomMineDrop)
+                        .filter((md) -> ((CustomMineDrop)md).getMine().getName().equals(mine == null ? "" : mine.getName())),
                 noMineIter = dropCandidates.stream().filter((d) -> !(d instanceof CustomMineDrop));
 
+        // drops to list (https://stackoverflow.com/a/22755993/9178470)
+        List<CustomDrop> drops = new ArrayList<>();
+        insideMineIter.sequential().collect(Collectors.toCollection(() -> drops));
+        noMineIter.sequential().collect(Collectors.toCollection(() -> drops));
+
+        // debug
+        for(CustomDrop cd : drops) {
+            if (cd instanceof CustomMineDrop) System.out.print("(mine) ");
+            System.out.println(cd.getDrop().getType().name());
+        }
+
         synchronized (BreakEventListener.class) {
-            // TODO change Main.getInstance().gems
-            insideMineIter.forEach((d) -> System.out.println(d.getDrop().getType().name()));
-            noMineIter.forEach((d) -> System.out.println(d.getDrop().getType().name()));
+            this.mineableGemsObject.gems.put(mined, drops); // override the drops
 
             this.mineableGemsBreakEvent.onBlockBreak(e);
+
+            this.mineableGemsObject.gems.put(mined, dropCandidates); // restore original drops
         }
     }
 }
