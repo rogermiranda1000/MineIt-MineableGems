@@ -3,6 +3,7 @@ package com.rogermiranda1000.mineit.mineable_gems.events;
 import com.rogermiranda1000.mineit.Mine;
 import com.rogermiranda1000.mineit.MineItApi;
 import com.rogermiranda1000.mineit.mineable_gems.CustomMineDrop;
+import com.sun.istack.internal.NotNull;
 import me.Mohamad82.MineableGems.Core.CustomDrop;
 import me.Mohamad82.MineableGems.Main;
 import org.bukkit.block.Block;
@@ -19,7 +20,7 @@ public class BreakEventListener implements Listener {
     private final Main mineableGemsObject;
     private final BreakEvent mineableGemsBreakEvent;
 
-    public BreakEventListener(BreakEvent mineableGemsBreakEvent, MineItApi mineItApiObject, Main mineableGemsObject) {
+    public BreakEventListener(BreakEvent mineableGemsBreakEvent, @NotNull MineItApi mineItApiObject, @NotNull Main mineableGemsObject) {
         this.mineableGemsBreakEvent = mineableGemsBreakEvent;
         this.mineItApiObject = mineItApiObject;
         this.mineableGemsObject = mineableGemsObject;
@@ -32,7 +33,9 @@ public class BreakEventListener implements Listener {
         final Mine mine = this.mineItApiObject.getMine(block);
         String mined = block.getType().toString();
         List<CustomDrop> dropCandidates = this.mineableGemsObject.gems.get(mined);
-        Stream<CustomDrop> insideMineIter = dropCandidates.stream().filter((d) -> d instanceof CustomMineDrop).filter((md) -> ((CustomMineDrop)md).getMine().getName().equals(mine == null ? "" : mine.getName())),
+        if (dropCandidates == null) return; // any block of that type
+        Stream<CustomDrop> insideMineIter = dropCandidates.stream().filter((d) -> d instanceof CustomMineDrop)
+                        .filter((md) -> ((CustomMineDrop)md).getMine().getName().equals(mine == null ? "" : mine.getName())),
                 noMineIter = dropCandidates.stream().filter((d) -> !(d instanceof CustomMineDrop));
 
         synchronized (BreakEventListener.class) {
