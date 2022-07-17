@@ -12,8 +12,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 
 public class JavaRecompiler {
-    public static final String JAVA_8 = "1.8";
-
     private final JavaDecompiler decompiler;
     private final JavaCompiler compiler;
     private final CodeReplacer[]replacers;

@@ -68,11 +68,13 @@ public class Error {
 
     private static final Pattern errorPattern = Pattern.compile("([^\\s.]+\\.java):(\\d+): error: ([^\\n]+)[ ]*\\n([^\\n]*)\\n([ ]*)\\^");
     public static Error []getErrors(String errors) {
+        //System.err.println(errors);
         /**
          *  CLASS.java:LINE: error: incompatible types: List<CAP#1> cannot be converted to List<String>
          *            customDrop.setBiomeFilter(section.getList("Biome-Filter", null));
          *                                                     |
          */
+
         Matcher m = errorPattern.matcher(errors);
         ArrayList<Error> list = new ArrayList<>();
         while (m.find()) list.add(new Error(m.group(1), Integer.parseInt(m.group(2)), m.group(3), m.group(4), m.group(5).length()));
@@ -86,6 +88,6 @@ public class Error {
 
     @Override
     public String toString() {
-        return this.file + ":" + this.line + " (" + this.errorCharacter + ") - " + this.error;
+        return this.file + ":" + this.line + ":" + this.errorCharacter + " - " + this.error;
     }
 }
