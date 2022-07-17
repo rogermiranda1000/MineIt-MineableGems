@@ -1,8 +1,10 @@
 # MineIt \[DLC\] - MineableGems
 [Spigot plugin page](TODO)
 
+Tested with MineableGems **1.11.3**.
+
 ## Dependencies
 - spigot 1.16.5
 - MineIt
 - MineableGems
-- org.javassist:javassist:3.29.0-GA (link library with .jar)
+- Build [JD-Core](https://github.com/java-decompiler/jd-core) (link it with .jar)

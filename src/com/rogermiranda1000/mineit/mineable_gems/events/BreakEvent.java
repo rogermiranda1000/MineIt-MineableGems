@@ -1,4 +1,4 @@
-package com.rogermiranda1000.mineit.events;
+package com.rogermiranda1000.mineit.mineable_gems.events;
 
 import org.bukkit.event.block.BlockBreakEvent;
 
