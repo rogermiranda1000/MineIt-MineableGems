@@ -41,8 +41,8 @@ public class JavaRecompiler {
     public void recompile(String jarPath, String className, String []compileClasspaths, String javaVersion) throws Exception {
         // get the expected code
         String code = this.decompiler.decompileClass(jarPath, className);
-        if (code.startsWith(alreadyCompiledMark)) throw new AlreadyRecompiledException();
-        if (this.markAsRecompiled) code = alreadyCompiledMark + code;
+        /*if (code.startsWith(alreadyCompiledMark)) throw new AlreadyRecompiledException();
+        if (this.markAsRecompiled) code = alreadyCompiledMark + code;*/
         for (CodeReplacer cr : this.replacers) code = cr.replace(code);
 
         final File out = new File(className.substring(className.lastIndexOf('.')+1) + ".java"); // <class name>.java
