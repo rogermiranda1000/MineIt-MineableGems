@@ -16,10 +16,12 @@ import me.Mohamad82.MineableGems.Events.BreakEvent_Legacy;
 import me.Mohamad82.MineableGems.Main;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
+import org.bukkit.plugin.RegisteredListener;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -87,7 +89,8 @@ public class MinableGems extends RogerPlugin {
                     .recompile(jarPath, className, compileClasspaths, JavaRecompiler.JAVA_8);
 
             getLogger().info(className + " compiled, the server must be restarted.");
-            getServer().reload();
+            Bukkit.getScheduler().scheduleSyncDelayedTask(this, ()->getServer().reload(), 1L); // reload once all is loaded
+            return; // don't launch the listener overrider; we need to wait for the reload
         } catch (AlreadyRecompiledException ex) {
             getLogger().info(className + " already recompiled.");
         } catch (Exception ex) {
@@ -103,7 +106,9 @@ public class MinableGems extends RogerPlugin {
             MineItApi mineItObject = MineItApi.getInstance();
 
             // override BlockBreakEvent
-            final OnServerEvent<BlockBreakEvent> onBlockBreak = (VersionController.version.compareTo(Version.MC_1_13) < 0) ? SpigotEventOverrider.overrideListener(mineableGems, BreakEvent_Legacy.class, BlockBreakEvent.class) : SpigotEventOverrider.overrideListener(mineableGems, BreakEvent.class, BlockBreakEvent.class);
+            final OnServerEvent<BlockBreakEvent> onBlockBreak = (VersionController.version.compareTo(Version.MC_1_13) < 0) ?
+                            SpigotEventOverrider.overrideListener(mineableGems, BreakEvent_Legacy.class, BlockBreakEvent.class) :
+                            SpigotEventOverrider.overrideListener(mineableGems, BreakEvent.class, BlockBreakEvent.class);
             pm.registerEvents(new BreakEventListener(e -> onBlockBreak.onEvent(e), mineItObject, mineableGemsObject), this);
         }, 1L);
     }
