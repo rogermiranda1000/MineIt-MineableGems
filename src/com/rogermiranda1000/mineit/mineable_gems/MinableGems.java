@@ -36,12 +36,11 @@ public class MinableGems extends JavaPlugin {
     @Override
     public void onEnable() {
         /* Recompile MineableGems */
+        String jarPath = "plugins/MineableGems-1.11.3.jar"; // TODO get name
+        String className = DropReader.class.getName();
+        String[] compileClasspaths = new String[]{"spigot-1.8.jar", "plugins/MineableGems-1.11.3.jar"};
         try {
-            String jarPath = "plugins/MineableGems-1.11.3.jar"; // TODO get name
-            String className = DropReader.class.getName();
-            String[] compileClasspaths = new String[]{"spigot-1.8.jar", "plugins/MineableGems-1.11.3.jar"};
-
-            System.out.println("Recompiling " + className + "...");
+            getLogger().info("Recompiling " + className + "...");
             new JavaRecompiler(new JDCodeDecompiler(),
                         new CodeReplacer[]{
                                 new RegexCodeReplacer(
@@ -68,14 +67,17 @@ public class MinableGems extends JavaPlugin {
                         }
                     ).recompile(jarPath, className, compileClasspaths, JavaRecompiler.JAVA_8);
 
-            // TODO reload plugin
+            getLogger().info(className + " compiled, the server must be restarted.");
+            getServer().reload();
+        } catch (AlreadyRecompiledException ex) {
+            getLogger().info(className + " already recompiled.");
         } catch (Exception ex) {
             this.printConsoleErrorMessage("Error while recompiling MineableGems");
             ex.printStackTrace();
         }
 
         // load after MineableGems
-        Bukkit.getScheduler().scheduleSyncDelayedTask(this, ()-> {
+        Bukkit.getScheduler().scheduleSyncDelayedTask(this, ()->{
             PluginManager pm = getServer().getPluginManager();
             Plugin mineableGems = pm.getPlugin("MineableGems");
             Main mineableGemsObject = Main.getInstance();
@@ -96,7 +98,7 @@ public class MinableGems extends JavaPlugin {
             } catch (ListenerNotFoundException ex) {
                 ex.printStackTrace();
             }
-        }, 2L);
+        }, 1L);
     }
 
     /**
