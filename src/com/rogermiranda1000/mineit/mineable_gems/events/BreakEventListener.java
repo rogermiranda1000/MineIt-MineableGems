@@ -1,8 +1,8 @@
-package com.rogermiranda1000.mineit.events;
+package com.rogermiranda1000.mineit.mineable_gems.events;
 
-import com.rogermiranda1000.mineit.CustomMineDrop;
 import com.rogermiranda1000.mineit.Mine;
 import com.rogermiranda1000.mineit.MineItApi;
+import com.rogermiranda1000.mineit.mineable_gems.CustomMineDrop;
 import me.Mohamad82.MineableGems.Core.CustomDrop;
 import me.Mohamad82.MineableGems.Main;
 import org.bukkit.block.Block;
@@ -35,9 +35,12 @@ public class BreakEventListener implements Listener {
         Stream<CustomDrop> insideMineIter = dropCandidates.stream().filter((d) -> d instanceof CustomMineDrop).filter((md) -> ((CustomMineDrop)md).getMine().getName().equals(mine == null ? "" : mine.getName())),
                 noMineIter = dropCandidates.stream().filter((d) -> !(d instanceof CustomMineDrop));
 
-        insideMineIter.forEach((d) -> System.out.println(d.getDrop().getType().name()));
-        noMineIter.forEach((d) -> System.out.println(d.getDrop().getType().name()));
+        synchronized (BreakEventListener.class) {
+            // TODO change Main.getInstance().gems
+            insideMineIter.forEach((d) -> System.out.println(d.getDrop().getType().name()));
+            noMineIter.forEach((d) -> System.out.println(d.getDrop().getType().name()));
 
-        this.mineableGemsBreakEvent.onBlockBreak(e);
+            this.mineableGemsBreakEvent.onBlockBreak(e);
+        }
     }
 }
