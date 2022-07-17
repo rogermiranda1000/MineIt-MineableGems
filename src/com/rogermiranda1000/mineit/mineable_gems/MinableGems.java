@@ -8,9 +8,11 @@ import com.rogermiranda1000.mineit.MineItApi;
 import com.rogermiranda1000.mineit.mineable_gems.events.BreakEventListener;
 import com.rogermiranda1000.mineit.mineable_gems.recompiler.*;
 import com.rogermiranda1000.mineit.mineable_gems.recompiler.Error;
+import com.rogermiranda1000.versioncontroller.Version;
 import com.rogermiranda1000.versioncontroller.VersionController;
 import me.Mohamad82.MineableGems.Core.DropReader;
 import me.Mohamad82.MineableGems.Events.BreakEvent;
+import me.Mohamad82.MineableGems.Events.BreakEvent_Legacy;
 import me.Mohamad82.MineableGems.Main;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
@@ -101,7 +103,7 @@ public class MinableGems extends RogerPlugin {
             MineItApi mineItObject = MineItApi.getInstance();
 
             // override BlockBreakEvent
-            final OnServerEvent<BlockBreakEvent> onBlockBreak = SpigotEventOverrider.overrideListener(mineableGems, BreakEvent.class, BlockBreakEvent.class);
+            final OnServerEvent<BlockBreakEvent> onBlockBreak = (VersionController.version.compareTo(Version.MC_1_13) < 0) ? SpigotEventOverrider.overrideListener(mineableGems, BreakEvent_Legacy.class, BlockBreakEvent.class) : SpigotEventOverrider.overrideListener(mineableGems, BreakEvent.class, BlockBreakEvent.class);
             pm.registerEvents(new BreakEventListener(e -> onBlockBreak.onEvent(e), mineItObject, mineableGemsObject), this);
         }, 1L);
     }
