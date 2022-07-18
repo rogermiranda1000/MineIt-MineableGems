@@ -94,7 +94,7 @@ public class MinableGems extends RogerPlugin {
                 spigot = new File(pluginFolder.getPath() + File.separatorChar + "spigot.jar");
                 if (!spigot.exists()) {
                     this.getLogger().info("Server >1.17; generating required classes...");
-                    MinableGems.cloneFile(this.getClass().getClassLoader().getResourceAsStream("spigot-1.16.5.jar"), spigot);
+                    SpigotBuilder.build("1.17.1", spigot);
                 }
             }
 
