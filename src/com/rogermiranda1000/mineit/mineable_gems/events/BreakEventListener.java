@@ -40,7 +40,7 @@ public class BreakEventListener implements Listener {
         }
         if (dropCandidates == null) return; // any block of that type
         Stream<CustomDrop> insideMineIter = dropCandidates.stream().filter((d) -> d instanceof CustomMineDrop)
-                        .filter((md) -> ((CustomMineDrop)md).getMine().getName().equals(mine == null ? "" : mine.getName())),
+                        .filter((md) -> mine != null && mine.equals(((CustomMineDrop) md).getMine())),
                 noMineIter = dropCandidates.stream().filter((d) -> !(d instanceof CustomMineDrop));
 
         // drops to list (https://stackoverflow.com/a/22755993/9178470)
