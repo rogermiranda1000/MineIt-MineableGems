@@ -25,6 +25,15 @@ public class SpigotBuilder {
         //SpigotBuilder.deleteDir(tmpDir);
     }
 
+    /**
+     * @return JAVA8 for <1.17, JAVA16 for 1.17, JAVA17 for >1.17
+     */
+    private static int javaVersion(String spigotVersion) {
+        if (spigotVersion.startsWith("1.17")) return 16;
+        if (Integer.parseInt(spigotVersion.split("\\.")[1]) < 17) return 8;
+        return 17;
+    }
+
     private static void deleteDir(File file) {
         File[] contents = file.listFiles();
         if (contents != null) {
