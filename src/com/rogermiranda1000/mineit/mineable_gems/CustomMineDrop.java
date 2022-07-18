@@ -1,13 +1,16 @@
 package com.rogermiranda1000.mineit.mineable_gems;
 
 import com.rogermiranda1000.mineit.Mine;
+import com.rogermiranda1000.mineit.MineChangedEvent;
 import com.rogermiranda1000.mineit.blocks.Mines;
+import com.sun.istack.internal.NotNull;
 import me.Mohamad82.MineableGems.Core.CustomDrop;
 import org.bukkit.craftbukkit.libs.jline.internal.Nullable;
 import org.bukkit.inventory.ItemStack;
 
-public class CustomMineDrop extends CustomDrop {
-    private final Mine mine;
+public class CustomMineDrop extends CustomDrop implements MineChangedEvent {
+    @Nullable
+    private Mine mine;
 
     /**
      * @pre Load MineIt before MineableGems
@@ -17,14 +20,22 @@ public class CustomMineDrop extends CustomDrop {
         this(Mines.getInstance().getMine(mine), drop);
     }
 
-    public CustomMineDrop(Mine mine, ItemStack drop) {
+    public CustomMineDrop(@NotNull Mine mine, ItemStack drop) {
         super(drop);
         this.mine = mine;
+        this.mine.addMineListener(this);
     }
 
     @Nullable
     public Mine getMine() {
-        if (this.mine == null) return null;
-        return Mines.getInstance().getMine(this.mine.getName()); // maybe the mine was deleted
+        return this.mine;
+    }
+
+    @Override
+    public void onMineChanged() { }
+
+    @Override
+    public void onMineRemoved() {
+        this.mine = null;
     }
 }

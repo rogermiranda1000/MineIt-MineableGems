@@ -44,7 +44,7 @@ public class BreakEventListener implements Listener {
                 noMineIter = dropCandidates.stream().filter((d) -> !(d instanceof CustomMineDrop));
 
         // drops to list (https://stackoverflow.com/a/22755993/9178470)
-        List<CustomDrop> drops = new ArrayList<>();
+        final List<CustomDrop> drops = new ArrayList<>();
         insideMineIter.sequential().collect(Collectors.toCollection(() -> drops));
         noMineIter.sequential().collect(Collectors.toCollection(() -> drops));
 
