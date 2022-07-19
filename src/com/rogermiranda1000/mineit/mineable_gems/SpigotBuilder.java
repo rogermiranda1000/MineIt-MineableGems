@@ -1,27 +1,41 @@
 package com.rogermiranda1000.mineit.mineable_gems;
 
+import com.rogermiranda1000.helper.RogerPlugin;
+import com.rogermiranda1000.versioncontroller.VersionController;
+import org.bukkit.Bukkit;
+import org.bukkit.scheduler.BukkitTask;
+
+import javax.annotation.Nullable;
 import java.io.*;
 import java.net.URL;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class SpigotBuilder {
     private static final String DOWNLOAD_URL = "https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar";
 
-    public static void build(String version, File out) throws IOException {
+    public static void build(String version, File out, final @Nullable RogerPlugin logger) throws IOException {
         File tmpDir = new File(UUID.randomUUID().toString());
         tmpDir.mkdir();
 
         SpigotBuilder.download(DOWNLOAD_URL, new File(tmpDir.getPath() + File.separatorChar + "BuildTools.jar"));
 
-        Process p = Runtime.getRuntime().exec("java -jar BuildTools.jar --rev 1.16.5", null, tmpDir); // compile in tmpDir
+        Process p = Runtime.getRuntime().exec("java -jar BuildTools.jar --compile craftbukkit --rev " + VersionController.version.toString(), null, tmpDir); // compile in tmpDir
+
+        final BukkitTask t = Bukkit.getScheduler().runTaskAsynchronously(logger, ()->logger.getLogger().info("Compiling... please wait."));
+
 
         BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-        Stream<String> errors = stdError.lines();
-        System.err.println("Detected error while building spigot");
-        errors.forEach(l -> System.err.println(l));
+        final List<String> errors = stdError.lines().collect(Collectors.toList());
+        if (t != null) t.cancel();
 
-        new File(tmpDir.getPath() + File.separatorChar + "spigot-" + version + ".jar").renameTo(out);
+        if (!new File(tmpDir.getPath() + File.separatorChar + "spigot-" + version + ".jar").renameTo(out)) {
+            // rename failed, maybe it failed the compilation?
+            if (errors.size() > 0) throw new BuildToolsFailedException(errors);
+        }
         //SpigotBuilder.deleteDir(tmpDir);
     }
 

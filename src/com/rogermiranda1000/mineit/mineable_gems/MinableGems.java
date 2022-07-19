@@ -94,7 +94,13 @@ public class MinableGems extends RogerPlugin {
                 spigot = new File(pluginFolder.getPath() + File.separatorChar + "spigot.jar");
                 if (!spigot.exists()) {
                     this.getLogger().info("Server >1.17; generating required classes...");
-                    SpigotBuilder.build("1.17.1", spigot);
+                    try {
+                        SpigotBuilder.build("1.17.1", spigot, this);
+                    } catch (BuildToolsFailedException ex) {
+                        this.printConsoleErrorMessage("Detected error while building spigot");
+                        ex.printStackTrace();
+                        this.printConsoleWarningMessage("Contact with the plugin author or place spigot 1.16.5 into plugins/MineIt-MineableGems (with the name 'spigot.jar')");
+                    }
                 }
             }
 
