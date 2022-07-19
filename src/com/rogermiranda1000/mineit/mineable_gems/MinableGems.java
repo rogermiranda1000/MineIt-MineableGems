@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import java.io.*;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 
 public class MinableGems extends RogerPlugin {
@@ -80,34 +81,17 @@ public class MinableGems extends RogerPlugin {
         super.onEnable();
 
         /* Recompile MineableGems */
-        String className = DropReader.class.getName();
-        try {
-            String originalJarPath = MinableGems.getJarPath(DropReader.class),
+        final String className = DropReader.class.getName();
+        final String originalJarPath = MinableGems.getJarPath(DropReader.class),
                     thisJarPath = MinableGems.getJarPath(this.getClass()), // this plugin & spigot 1.16
                     mineItJarPath = MinableGems.getJarPath(Mine.class);
 
-            File spigot = null;
-            if (VersionController.version.compareTo(Version.MC_1_17) > 0) {
-                // it won't work on spigot 1.18 and 1.19
-                File pluginFolder = this.getDataFolder();
-                if (!pluginFolder.exists()) pluginFolder.mkdir();
-                spigot = new File(pluginFolder.getPath() + File.separatorChar + "spigot.jar");
-                if (!spigot.exists()) {
-                    this.getLogger().info("Server >1.17; generating required classes...");
-                    try {
-                        SpigotBuilder.build("1.17.1", spigot, this);
-                    } catch (BuildToolsFailedException ex) {
-                        this.printConsoleErrorMessage("Detected error while building spigot");
-                        ex.printStackTrace();
-                        this.printConsoleWarningMessage("Contact with the plugin author or place spigot 1.16.5 into plugins/MineIt-MineableGems (with the name 'spigot.jar')");
-                    }
-                }
-            }
+        Function<File,Boolean> compile = (spigot)-> {
+            try {
+                String[] compileClasspaths = new String[]{(spigot != null) ? spigot.getPath() : VersionController.runningJarPath, originalJarPath, thisJarPath, mineItJarPath};
 
-            String[] compileClasspaths = new String[]{(spigot != null) ? spigot.getPath() : VersionController.runningJarPath, originalJarPath, thisJarPath, mineItJarPath};
-
-            getLogger().info("Recompiling " + className + "...");
-            new JavaRecompiler(new JDCodeDecompiler(),
+                getLogger().info("Recompiling " + className + "...");
+                new JavaRecompiler(new JDCodeDecompiler(),
                         new CodeReplacer[]{
                                 new DependenciesImporter(CustomMineDrop.class),
                                 new DependenciesImporter(List.class), // for some reason, in >1.13 it doesn't exist
@@ -124,7 +108,8 @@ public class MinableGems extends RogerPlugin {
                         (code, errors) -> {
                             for (Error e : errors) {
                                 //this.getLogger().info("Fixing line " + e.getLine() + "(" + e.getError() + ")...");
-                                if (!e.getError().startsWith("incompatible types: ") || !e.getError().endsWith(" cannot be converted to List<String>")) continue; // we don't know how to solve it
+                                if (!e.getError().startsWith("incompatible types: ") || !e.getError().endsWith(" cannot be converted to List<String>"))
+                                    continue; // we don't know how to solve it
 
                                 int index = MinableGems.ordinalIndexOf(code, "\n", e.getLine() - 1);
                                 if (index == -1) throw new CompileException("Line " + e.getLine() + " not found.", e);
@@ -136,17 +121,39 @@ public class MinableGems extends RogerPlugin {
                             }
                             return code;
                         }, true)
-                    .recompile(originalJarPath, className, compileClasspaths, RuntimeCompiler.JAVA_8);
+                        .recompile(originalJarPath, className, compileClasspaths, RuntimeCompiler.JAVA_8);
 
-            getLogger().info(className + " compiled, the server must be restarted.");
-            Bukkit.getScheduler().scheduleSyncDelayedTask(this, ()->getServer().reload(), 1L); // reload once all is loaded
-            return; // don't launch the listener overrider; we need to wait for the reload
-        } catch (AlreadyRecompiledException ex) {
-            getLogger().info(className + " already recompiled.");
-        } catch (Exception ex) {
-            this.printConsoleErrorMessage("Error while recompiling MineableGems");
-            ex.printStackTrace();
+                getLogger().info(className + " compiled, the server must be restarted.");
+                Bukkit.getScheduler().scheduleSyncDelayedTask(this, () -> getServer().reload(), 1L); // reload once all is loaded
+                return false; // don't launch the listener overrider; we need to wait for the reload
+            } catch (AlreadyRecompiledException ex) {
+                getLogger().info(className + " already recompiled.");
+                return true;
+            } catch (Exception ex) {
+                this.printConsoleErrorMessage("Error while recompiling MineableGems");
+                ex.printStackTrace();
+                return false; // error
+            }
+        };
+
+        File tmpSpigot = null;
+        if (VersionController.version.compareTo(Version.MC_1_17) > 0) {
+            // it won't work on spigot 1.18 and 1.19
+            File pluginFolder = this.getDataFolder();
+            if (!pluginFolder.exists()) pluginFolder.mkdir();
+            tmpSpigot = new File(pluginFolder.getPath() + File.separatorChar + "spigot.jar");
+            if (!tmpSpigot.exists() && !JavaRecompiler.alreadyCompiled(originalJarPath, className)) {
+                this.getLogger().info("Server >1.17; generating required classes...");
+                this.printConsoleWarningMessage("This will take some time. MineableGems won't work until the next reload.");
+                this.printConsoleWarningMessage("The server will AUTO RELOAD after the compilation ends.");
+
+                final File spigot = tmpSpigot;
+                SpigotBuilder.build("1.17.1", tmpSpigot, ()->compile.apply(spigot), this);
+                return; // the runnable will do the work
+            }
         }
+
+        if (!compile.apply(tmpSpigot)) return;
 
         // load after MineableGems
         Bukkit.getScheduler().scheduleSyncDelayedTask(this, ()->{

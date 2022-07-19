@@ -17,26 +17,38 @@ import java.util.stream.Stream;
 public class SpigotBuilder {
     private static final String DOWNLOAD_URL = "https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar";
 
-    public static void build(String version, File out, final @Nullable RogerPlugin logger) throws IOException {
-        File tmpDir = new File(UUID.randomUUID().toString());
+    public static void build(final String version, final File out, final Runnable onBuild, final RogerPlugin plugin) {
+        final File tmpDir = new File(UUID.randomUUID().toString());
         tmpDir.mkdir();
 
-        SpigotBuilder.download(DOWNLOAD_URL, new File(tmpDir.getPath() + File.separatorChar + "BuildTools.jar"));
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, ()-> {
+            try {
+                SpigotBuilder.download(DOWNLOAD_URL, new File(tmpDir.getPath() + File.separatorChar + "BuildTools.jar"));
 
-        Process p = Runtime.getRuntime().exec("java -jar BuildTools.jar --compile craftbukkit --rev " + VersionController.version.toString(), null, tmpDir); // compile in tmpDir
+                Process p = Runtime.getRuntime().exec("java -jar BuildTools.jar --compile craftbukkit --rev " + VersionController.version.toString(), null, tmpDir); // compile in tmpDir
 
-        final BukkitTask t = Bukkit.getScheduler().runTaskAsynchronously(logger, ()->logger.getLogger().info("Compiling... please wait."));
+                BukkitTask t = Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> plugin.getLogger().info("Compiling... please wait."));
 
+                BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+                final List<String> errors = stdError.lines().collect(Collectors.toList());
+                t.cancel();
 
-        BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-        final List<String> errors = stdError.lines().collect(Collectors.toList());
-        if (t != null) t.cancel();
+                if (!new File(tmpDir.getPath() + File.separatorChar + "spigot-" + version + ".jar").renameTo(out)) {
+                    // rename failed, maybe it failed the compilation?
+                    SpigotBuilder.deleteDir(tmpDir);
+                    if (errors.size() > 0) throw new BuildToolsFailedException(errors);
+                }
+                //SpigotBuilder.deleteDir(tmpDir);
 
-        if (!new File(tmpDir.getPath() + File.separatorChar + "spigot-" + version + ".jar").renameTo(out)) {
-            // rename failed, maybe it failed the compilation?
-            if (errors.size() > 0) throw new BuildToolsFailedException(errors);
-        }
-        //SpigotBuilder.deleteDir(tmpDir);
+                onBuild.run();
+            } catch (BuildToolsFailedException ex) {
+                plugin.printConsoleErrorMessage("Detected error while building spigot");
+                ex.printStackTrace();
+                plugin.printConsoleWarningMessage("Contact with the plugin author or place spigot 1.16.5 into plugins/MineIt-MineableGems (with the name 'spigot.jar')");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     /**

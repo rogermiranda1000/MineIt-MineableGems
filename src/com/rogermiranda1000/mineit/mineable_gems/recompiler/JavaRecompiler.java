@@ -40,9 +40,9 @@ public class JavaRecompiler {
      * @param className         Class#getName()
      * @return If the mentioned variable is present or not
      */
-    public boolean alreadyCompiled(String jarPath, String className) {
+    public static boolean alreadyCompiled(String jarPath, String className) {
         try {
-            Class<?> c = Class.forName(className, true, URLClassLoader.newInstance(new URL[]{new URL("file:" + jarPath)}, this.getClass().getClassLoader()));
+            Class<?> c = Class.forName(className, true, URLClassLoader.newInstance(new URL[]{new URL("file:" + jarPath)}, JavaRecompiler.class.getClassLoader()));
             Field f = c.getDeclaredField("ALREADY_COMPILED");
             return true;
         } catch (NoSuchFieldException ignored) {
@@ -75,7 +75,7 @@ public class JavaRecompiler {
      * @throws AlreadyRecompiledException The specified class is marked as recompiled
      */
     public void recompile(String jarPath, String className, String []compileClasspaths, String javaVersion) throws Exception {
-        if (this.alreadyCompiled(jarPath, className)) throw new AlreadyRecompiledException();
+        if (JavaRecompiler.alreadyCompiled(jarPath, className)) throw new AlreadyRecompiledException();
 
         // get the expected code
         String code = this.decompiler.decompileClass(jarPath, className);
