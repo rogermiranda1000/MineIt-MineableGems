@@ -27,11 +27,12 @@ public class SpigotBuilder {
 
                 Process p = Runtime.getRuntime().exec("java -jar BuildTools.jar --compile craftbukkit --rev " + VersionController.version.toString(), null, tmpDir); // compile in tmpDir
 
-                BukkitTask t = Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> plugin.getLogger().info("Compiling... please wait."));
+                BukkitTask t = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> plugin.getLogger().info("Compiling... please wait."), 0L, 20*25 /* every 25s */);
 
                 BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
                 final List<String> errors = stdError.lines().collect(Collectors.toList());
                 t.cancel();
+                plugin.getLogger().info("Compilation ended.");
 
                 if (!new File(tmpDir.getPath() + File.separatorChar + "spigot-" + version + ".jar").renameTo(out)) {
                     // rename failed, maybe it failed the compilation?
