@@ -25,6 +25,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 
 import javax.annotation.Nullable;
+import java.io.*;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -43,7 +44,7 @@ public class MinableGems extends RogerPlugin {
     }
 
     @Override
-    public String getPluginID() { return null; }
+    public String getPluginID() { return "103464"; }
 
     @Nullable
     private static String getJarPath(Class<?> c) {
@@ -58,6 +59,21 @@ public class MinableGems extends RogerPlugin {
         }
     }
 
+    /**
+     * @post is is closed
+     */
+    private static void cloneFile(InputStream is, File out) throws IOException {
+        OutputStream os = new FileOutputStream(out);
+
+        byte[] buffer = new byte[8 * 1024];
+        int bytesRead;
+        while ((bytesRead = is.read(buffer)) != -1) {
+            os.write(buffer, 0, bytesRead);
+        }
+        is.close();
+        os.close();
+    }
+
     @SuppressWarnings("ConstantConditions") // ignore NPE
     @Override
     public void onEnable() {
@@ -67,11 +83,22 @@ public class MinableGems extends RogerPlugin {
         String className = DropReader.class.getName();
         try {
             String originalJarPath = MinableGems.getJarPath(DropReader.class),
-                    thisJarPath = MinableGems.getJarPath(this.getClass()),
+                    thisJarPath = MinableGems.getJarPath(this.getClass()), // this plugin & spigot 1.16
                     mineItJarPath = MinableGems.getJarPath(Mine.class);
 
+            File spigot = null;
+            if (VersionController.version.compareTo(Version.MC_1_17) > 0) {
+                // it won't work on spigot 1.18 and 1.19
+                File pluginFolder = this.getDataFolder();
+                if (!pluginFolder.exists()) pluginFolder.mkdir();
+                spigot = new File(pluginFolder.getPath() + File.separatorChar + "spigot.jar");
+                if (!spigot.exists()) {
+                    this.getLogger().info("Server >1.17; generating required classes...");
+                    MinableGems.cloneFile(this.getClass().getClassLoader().getResourceAsStream("spigot-1.16.5.jar"), spigot);
+                }
+            }
 
-            String[] compileClasspaths = new String[]{VersionController.runningJarPath, originalJarPath, thisJarPath, mineItJarPath};
+            String[] compileClasspaths = new String[]{(spigot != null) ? spigot.getPath() : VersionController.runningJarPath, originalJarPath, thisJarPath, mineItJarPath};
 
             getLogger().info("Recompiling " + className + "...");
             new JavaRecompiler(new JDCodeDecompiler(),
