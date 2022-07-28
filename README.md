@@ -8,3 +8,4 @@ Tested with MineableGems **1.11.3**.
 - MineIt
 - MineableGems
 - Build [JD-Core](https://github.com/java-decompiler/jd-core) (extract with .jar)
+- Maven's `org.codehaus.janino:janino:LATEST` (extract with .jar)

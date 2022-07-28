@@ -114,7 +114,7 @@ public class MinableGems extends RogerPlugin {
                                         (groups) -> "if (plugin.gems.get(" + groups[0] + ") != null) " + groups[1] + ".addAll(DropReader.plugin.gems.get(" + groups[0] + "));",
                                         true, true)*/
                         },
-                        new RuntimeCompiler(),
+                        new JaninoCompiler(),
                         (code, errors) -> {
                             for (Error e : errors) {
                                 //this.getLogger().info("Fixing line " + e.getLine() + "(" + e.getError() + ")...");
