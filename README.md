@@ -1,5 +1,5 @@
 # MineIt \[DLC\] - MineableGems
-[Spigot plugin page](TODO)
+[Spigot plugin page](https://www.spigotmc.org/resources/mineit-x-mineablegems.103464/)
 
 Tested with MineableGems **1.11.3**.
 

@@ -1,8 +1,8 @@
 package com.rogermiranda1000.mineit.mineable_gems;
 
-import com.rogermiranda1000.mineit.Mine;
+import com.rogermiranda1000.mineit.mine.Mine;
 import com.rogermiranda1000.mineit.MineChangedEvent;
-import com.rogermiranda1000.mineit.blocks.Mines;
+import com.rogermiranda1000.mineit.mine.blocks.Mines;
 import com.sun.istack.internal.NotNull;
 import me.Mohamad82.MineableGems.Core.CustomDrop;
 import org.bukkit.craftbukkit.libs.jline.internal.Nullable;
